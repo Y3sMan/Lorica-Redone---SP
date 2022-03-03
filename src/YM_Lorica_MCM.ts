@@ -10,25 +10,7 @@ let close = false
 browser.loadUrl("file:///Data/Platform/UI/lorica-menu.html"); 
 export let mainMCM = () => {
 
-	 on('menuClose', (event) => {
-		// if ( GetIntValue(null, "YM.Lorica.MCM.MenuFlag", 0) == 0 ) { 
-		// 	if ( GetIntValue(null, "YM.Lorica.MCM.Debuff.Update", 0) == 1 ) { 
-		// 		once('update', () => {
-		// 			const oldupkeep = StringListToArray(null, "YM.Lorica.MCM.Enum.Upkeep")
-		// 			FormsToStringNames(FormListToArray(juKeys.path, suKeys.formUpkeepList), "YM.Lorica.MCM.Enum.Upkeep")
-		// 			const newupkeep = StringListToArray(null, "YM.Lorica.MCM.Enum.Upkeep")
-		// 			// if ( GetDiffString(newupkeep, oldupkeep, true, false).length != 0 ) {
-			// 			if ( GetIntValue(null, "YM.Lorica.MCM.Debuff.Update", 0) == 1 ) {
-				// 				printConsole("MENUCLOSE:: => UPDATING ");
-				// 				SetIntValue(null, "YM.Lorica.MCM.Debuff.Update", 0);
-				// 			};
-				// 		});
-				
-				// 	};	
-				// };
-				
-		SetIntValue(null, "YM.Lorica.MCM.MenuFlag", 0)
-	}); 
+	 on('menuClose', (event) => { SetIntValue(null, "YM.Lorica.MCM.MenuFlag", 0) }); 
 	on('menuOpen', () => {
 		if ( GetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 0) == 1) { 
 			once('update', () => { SetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 0) });
@@ -55,23 +37,7 @@ export let mainMCM = () => {
 			);
 		// ListCompile()
 	});
-	on('update', () => {
-		// if (Input.isKeyPressed(DxScanCode.Q)){
-		// 	Game.forceFirstPerson();
-		// 	browser.setFocused(true);
-		// 	focused = true
-		// 	browser.setVisible(true);
-		// 	w();
-		// }
-		// if (focused && Input.isKeyPressed(DxScanCode.Escape) || close) {
-		// 	browser.setFocused(false);
-		// 	focused = false
-		// 	browser.setVisible(false);
-		// 	close = false
-			
-		// }
-		
-	});
+
 	hooks.sendPapyrusEvent.add(
 		{
 			enter(ctx) {
@@ -142,18 +108,6 @@ var FormsToStringNames = (forms: Form[], key: string) => {
 	return stringlist
 };
 
-// function UpdateLists() {
-// 	let list = FormListToArray(juKeys.path, suKeys.formUpkeepList)
-// 	let changes = StringListToArray(null, "YM.Lorica.MCM.Changes.Upkeep")
-// 	let i = 0
-// 	list.forEach(form => {
-// 		if ( form.getName() == changes[i]) {
-			
-// 		}
-// 		i++
-// 	})
-// }
-
 function FillMCMOptions () {
 	
 	var a: Form[] 
@@ -190,67 +144,3 @@ function FilterOptions (arr, query) {
 	})
 }
 
-function FillMenuOptions () {
-	var a: Form[] 
-	var options: String[] | undefined
-
-	
-	a = FormListToArray(juKeys.path, suKeys.formUpkeepList)
-	// settings["example"]["setting_UpkeepWhiteList"] = JSON.stringify(["what the fuck"], undefined, 2)
-	
-	
-	let menu = settings["example"];
-	const t = new Date().toLocaleString();
-	let msg = t + menu
-	writeLogs("LoricaRedone", msg)
-	
-	// const filename = '../Plugins/example-settings.txt'
-	// const filepathSPCM = `Data/Platform/SPCM/${filename.replace('-settings.txt', '.json')}`;
-	// let jsonSPCM = JSON.parse(ReadFromFile(filepathSPCM));
-	// Debug.trace(JSON.stringify(jsonSPCM), 1)`
-	// WriteToFile(filename, menu, false, false)
-	// printConsole(menu)
-	
-};
-
-
-const FormListToNameList = function ( formlist: Form[] ) {
-	let stringlist: String[] = ['No Changes']
-	formlist.forEach(form => {
-		if ( !form ){return;};
-		let name: string = form.getName() + ` - ${form.getFormID()}`;
-		if ( !name){return;};
-		stringlist.push(name);
-	});
-	return stringlist
-};
-
-const ListCompile = function () {
-	const upkeep = FormListToNameList(FormListToArray(juKeys.path, suKeys.formUpkeepList))
-	const blacklist = FormListToNameList(FormListToArray(juKeys.path, suKeys.formBlackList))
-	const utilitylist = FormListToNameList(FormListToArray(juKeys.path, suKeys.formExclusionList))
-	const lists = [upkeep, blacklist]
-	for ( var l = 0; l < lists.length; l++ ) {
-		let list = lists[l]
-		for ( var s = 0; s < list.length; s++) {
-			let spell = list[s]
-			if (blacklist.includes(spell)) { SetIntValue(null, `Lorica.Upkeep.${spell}`, 1);};}; 
-		}
-	// const differences_upkeep = upkeep.filter(x => !blacklist.includes(x))
-	const differences_utility = upkeep.filter(x => !utilitylist.includes(x))
-	
-}
-const w = async () => {
-	await focused
-	const list = 'spellList'.toUpperCase()
-	let strings: String[] 
-	strings = FormListToNameList(FormListToArray(juKeys.path, suKeys.formUpkeepList))
-	const uniqueStrings = Array.from(new Set(strings))
-	for ( var s = 0; s < strings.length; s++) {
-		let spell = uniqueStrings[s];
-		let status = 0
-		if ( GetIntValue(null, `Lorica.Upkeep.${s}`, 0) == 1 ) {	status = 1 }
-		// status is a 1x2 matrix/array to showcase each spell's status, whether it's in [upkeep,blacklist] which is represented as [ 1 0 ] with 1=True and 0=False
-		browser.executeJavaScript(`AddSpellOptions('${spell}', ${status})`); 
-	}
-}

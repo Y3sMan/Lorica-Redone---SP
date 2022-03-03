@@ -11,12 +11,9 @@ export function DispelSpells(option: string = '') {
 	printConsole(`DispelSpells:: FormListCount(null, suKeys.formAppliedList) => ${FormListCount(null, suKeys.formAppliedList)}`)
 	if ( option.toLowerCase() == 'all' ){ ToggleSpell('zero'); }
 	for ( let i = 0; i < FormListCount(null, suKeys.formAppliedList); i++ ) { 
-		// if ( option.toLowerCase() == 'exclusive' ){	
 		const F = FormListGet(null, suKeys.formAppliedList, i);
-		// if ( !F ) { return; };
 		if ( FormListHas(juKeys.path, suKeys.formExclusionList, F) && option.toLowerCase()== 'exclusive') { break; };
 		ToggleSpell("off", F)
-		// };
 	}
 };
 

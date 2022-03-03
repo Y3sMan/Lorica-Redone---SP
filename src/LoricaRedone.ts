@@ -51,26 +51,18 @@ hooks.sendAnimationEvent.add({
 //---------------------------MAIN--------------------------------------------
 on('spellCast', (event) => {
 	printConsole("hello");
-	const caster = Actor.from(event.caster.getBaseObject()) // event castor as Actor
+	// const caster = Actor.from(event.caster.getBaseObject()) // event castor as Actor
 	const castspell = Form.from(event.spell) // event spell as Form
-	const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
-	printConsole(`AppliedList Has => ${FormListHas(null, suKeys.formAppliedList, castspell)}`)
+	// const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
+	// printConsole(`AppliedList Has => ${FormListHas(null, suKeys.formAppliedList, castspell)}`)
 	
 	if ( !castspell ) { return; };
 	// if the spell is in the blacklist or isn't in the upkeep list, just stop
 	if (UpkeepListHas(juKeys.path, suKeys.formBlackList, castspell) || !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, castspell)){return;}; 
 	
 	// main toggle if-block
-	if (!FormListHas(null, suKeys.formAppliedList, castspell)){
-		
-		ToggleSpell('on', castspell)
-		
-	}
-	else {
-		
-		ToggleSpell('off', castspell)
-		
-	};
+	if (!FormListHas(null, suKeys.formAppliedList, castspell)){ ToggleSpell('on', castspell); }
+	else { ToggleSpell('off', castspell); };
 	
 });
 // ----------------------------------------CLEANUP------------------------------------------
@@ -155,9 +147,6 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 		SetIntValue(null, suKeys.iUpkeepTotal, 0);
 		fMag = 0;
 		iCum = 0;
-		// for ( let i = 0; i < FormListCount(null, suKeys.formAppliedList); i++ ) { 
-		// 	Remove(spell!)
-		// }
 	};
 	const newUpkeep = AdjustIntValue(null, suKeys.iUpkeepTotal, fMag);
 	const newCum = AdjustIntValue(null, suKeys.iCumTotal, iCum);
