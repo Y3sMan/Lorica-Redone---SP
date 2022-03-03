@@ -1,4 +1,4 @@
-import { on, printConsole, Form, Game, Message, Actor, ObjectReference, Spell, Debug, Utility, Ui } from  "skyrimPlatform";
+import { on, printConsole, Form, Game, Message, Actor, ObjectReference, Spell, Debug, Utility, Ui, writeLogs } from  "skyrimPlatform";
 import { AddMagicEffectToSpell, GetActorValueModifier, IntToString } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
 
 
@@ -12,7 +12,7 @@ export function pl() {
 		return Game.getPlayer();
 }
 
-export function Log(functionName: string, msg: string = "", stackIndent: number = 0) {
+export function traceLog(functionName: string, msg: string = "", stackIndent: number = 0) {
     let sBaseIndent = "";
     while (stackIndent > 0) {
         sBaseIndent = sBaseIndent + "  ";
@@ -23,6 +23,12 @@ export function Log(functionName: string, msg: string = "", stackIndent: number 
         result = result + " -> ";
     }
     Debug.trace(result + msg, 0);
+}
+
+export function log(message: any){
+	const t = new Date().toLocaleString();
+	let msg = t + ' :: ' + message
+	writeLogs("LoricaRedone", msg)
 }
 
 
@@ -44,6 +50,9 @@ export enum suKeys {
 	iDebuffMin = "Minimum Debuff Cost",
 	bCompatInitialized = "YM.Lorica.Compat.Init",
 	iCompatAllSpells = "YM.Lorica.Compat.AllSpells",
+	MCM_Enum_Upkeep = "YM.Lorica.MCM.Enum.Upkeep",
+	MCM_Enum_Blacklist = "YM.Lorica.MCM.Enum.Blacklist",
+	MCM_Enum_Utility = "YM.Lorica.MCM.Enum.Exclusion",
 };
 
 export enum juKeys {

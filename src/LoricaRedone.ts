@@ -1,7 +1,7 @@
 import { on, printConsole, Form, Game, Message, Actor, ObjectReference, Spell, Debug, Utility, hooks, once, FormList, Keyword, MagicEffect } from  "skyrimPlatform";
 import { SetIntValue, GetIntValue, FormListHas, GetFloatValue, FormListAdd, UnsetIntValue, AdjustIntValue, FormListCount, FormListRemove, FormListGet } from  "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListHas as UpkeepListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
-import { IntToString, GivePlayerSpellBook, HasActiveSpell, GetAllSpells } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
+import { IntToString, HasActiveSpell, GetAllSpells, GivePlayerSpellBook } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
 import { pl, juKeys, suKeys, UIUpdateDebuffMeter } from "./YM_Lorica_Shared"
 import { mainCompat } from "./YM_Lorica_Compat"
 import { mainUtilitySpells } from "./YM_Lorica_UtilitySpells"
@@ -20,32 +20,34 @@ on('scriptInit', (event) => {
 	allspells = GetAllSpells(null, true);
 	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length && !GetIntValue(null, suKeys.bCompatInitialized) ) { mainCompat(); };
 });
+once('update', () => {
+	// GivePlayerSpellBook(); // debug option
+})
 // --------------------------------DUAL CAST CHECK----------------------------
 // hook into dual cast magic animation to doubly check if spell was dual cast [check]
 let bDualCast = false
 hooks.sendAnimationEvent.add({
 	enter(ctx) {
-		if (ctx.animEventName.toUpperCase().includes("DUALMAGIC")) {
-			bDualCast = true;
-		}
-		else {
-			bDualCast = false;
-		}
+		if (ctx.animEventName.toUpperCase().includes("DUALMAGIC")) { bDualCast = true; }
+		else { bDualCast = false; }
+		once('update', () => {
+			const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
+			if ( !equippedRight ) { return; };
+			const sDualCast = "LoricaRedone" + equippedRight.getName() + "DualCast";
+			if ( !equippedRight || !sDualCast ) { return; };
+
+			if ( bDualCast ) {
+				SetIntValue(null, sDualCast, 1);
+				printConsole('sendAnimationEvent:: dual cast check: ' + GetIntValue(null, sDualCast, 0));
+			}
+			// else { SetIntValue(null, sDualCast, 0); }	
+		});
 	},
 	leave(ctx) {
 		
 	}
 },  0x14, 0x14); // filter out non-player events
 
-on('update', () => {
-	if ( bDualCast ) {
-		const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
-		const sDualCast = "LoricaRedone" + equippedRight.getName() + "DualCast";
-		SetIntValue(null, sDualCast, 1);
-		printConsole('sendAnimationEvent:: dual cast check: ' + GetIntValue(null, sDualCast, 0));
-	};
-	
-});
 //---------------------------MAIN--------------------------------------------
 on('spellCast', (event) => {
 	printConsole("hello");
@@ -83,14 +85,21 @@ on('effectFinish', (event) => {
 // -------------------------------------FUNCTIONS----------------------------------------------------------------
 
 export function ToggleSpell(option: string, spell?: Form) { // variable name succeeded by a ? makes the argument optional
+	const Remove = function (spell: Form) { 
+		FormListRemove(null, suKeys.formAppliedList, spell!, false) ;// remove form from applied spells list
+		formlistApplied.removeAddedForm(spell!);
+		pl().dispelSpell(Spell.from(spell));
+	}
+	
 	printConsole("ToggleSpell:: running")
+	option = option.toLowerCase()
 
-	const spellCum =  Spell.from(Game.getFormFromFile(0x001A33, "Lorica Redone.esp")) // the spell responsible for the Cumulative penalty
-	const spellUpkeep =  Spell.from(Game.getFormFromFile(0x001c40, "Lorica Redone.esp")) // the spell responsible for the Total Upkeep penalty
+	const spellCum =  Spell.from(Game.getFormFromFile(0x1A33, "Lorica Redone.esp")) // the spell responsible for the Cumulative penalty
+	const spellUpkeep =  Spell.from(Game.getFormFromFile(0x1c40, "Lorica Redone.esp")) // the spell responsible for the Total Upkeep penalty
 	
 	const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
 
-	const spellstring = IntToString(spell!.getFormID(), true) // exclamation mark assures compiler that variable will be there
+	const spellstring = IntToString(spell?.getFormID(), true) // exclamation mark assures compiler that variable will be there
 	let fMag = GetFloatValue(null, spellstring, 0);
 	let iCum = Math.floor(fMag * (GetFloatValue(null, suKeys.fCumFraction, 0.20))); // get the cumulative increase from the argument spell, rounded down
 	// remove upkeep and cumulative spells for adjustment
@@ -105,7 +114,7 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 		formlistApplied.addForm(spell!);
 		try {
 			
-			if (equippedRight.getFormID() == equippedLeft.getFormID()){
+			if (equippedRight.getFormID() == equippedLeft.getFormID() && GetIntValue(null, sDualCast, 0) == 1){
 				printConsole('ToggleSpell: dualcast check => Good!');
 				fMag *= 2
 				iCum *= 2
@@ -115,13 +124,9 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 		catch (error) {};
 	};
 	if (option == "off"){
-		FormListRemove(null, suKeys.formAppliedList, spell!, false) ;// remove form from applied spells list
-		formlistApplied.removeAddedForm(spell!);
-		pl().dispelSpell(Spell.from(spell));
-		
-		
+		Remove(spell!)
 		// dual cast check
-		if ( GetIntValue(null, sDualCast, 0) ) {
+		if ( GetIntValue(null, sDualCast, 0) != 0 ) {
 			fMag *= 2;
 			iCum *= 2;
 			UnsetIntValue(null, sDualCast);
@@ -145,11 +150,14 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 		fMag = 0;
 		iCum = 0;
 	};
-	if (option == "zero"){
+	if (option == "zero" || FormListCount(null, suKeys.formAppliedList) == 0){
 		SetIntValue(null, suKeys.iCumTotal, 0);
 		SetIntValue(null, suKeys.iUpkeepTotal, 0);
 		fMag = 0;
 		iCum = 0;
+		// for ( let i = 0; i < FormListCount(null, suKeys.formAppliedList); i++ ) { 
+		// 	Remove(spell!)
+		// }
 	};
 	const newUpkeep = AdjustIntValue(null, suKeys.iUpkeepTotal, fMag);
 	const newCum = AdjustIntValue(null, suKeys.iCumTotal, iCum);

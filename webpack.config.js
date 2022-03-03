@@ -8,7 +8,7 @@ const overwrite = "G:/Games/MO Instances/Enderal/overwrite";
 
 // Configure webpack output file folder and file name
 const outputFolder = path.resolve('Platform', 'plugins')
-const outputFilename = `${packageInfo.name}-${packageInfo.version}.js`
+const outputFilename = `${packageInfo.name}.js`
 
 
 
@@ -16,9 +16,9 @@ const outputFilename = `${packageInfo.name}-${packageInfo.version}.js`
 // This should be a .ts file, e.g. not dist/index.js
 const entryPoint = `./src/${packageInfo.name}.ts`
 
-const copyFolder = `./src/.hidden`
-const copyFilename = `${packageInfo.name}-${packageInfo.version}.ts`
-const backup = `xcopy "${entryPoint}" "${copyFolder}/copyFilename"`
+// const copyFolder = `./src/.hidden`
+// const copyFilename = `${packageInfo.name}-${packageInfo.version}.ts`
+// const backup = `xcopy "${entryPoint}" "${copyFolder}/copyFilename"`
 
 // When webpack is build normally, it will simply output a file to the configured output folder and filename.
 // If you run webpack with the DEPLOY_PLUGIN environment variable configured to true, then it will
@@ -65,7 +65,7 @@ if (process.env['DEPLOY_PLUGIN']?.includes('true')) {
     let zipCommand = `npm run zip:cli -- "${zipFile}" "${localPluginFiles}"`
     // if (! process.platform == 'win32')
         // zipCommand = `cp "${outputFile}" "${localPluginsFolder}" && npm run zip:cli -- "${zipFile}" "${localPluginFiles}" && rm -rf "${localPlatformFolder}"`
-    plugins.push(new WebpackShellPluginNext({ onBuildEnd: { scripts: [zipCommand, backup] } }))
+    plugins.push(new WebpackShellPluginNext({ onBuildEnd: { scripts: [zipCommand] } }))
 }
 
 module.exports = {

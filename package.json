@@ -12,6 +12,7 @@
     "dev": "npm i && npm run webpack:deploy:watch"
   },
   "devDependencies": {
+    "@types/node": "^17.0.21",
     "bestzip": "^2.2.0",
     "ts-loader": "^9.2.6",
     "tsc": "^2.0.3",
@@ -27,6 +28,8 @@
   "dependencies": {
     "@skyrim-platform/papyrus-util": "^4.2.3",
     "@skyrim-platform/po3-papyrus-extender": "^4.5.7",
-    "@skyrim-platform/skyrim-platform": "^2.3.0"
+    "@skyrim-platform/skyrim-platform": "^2.3.0",
+    "filesystem": "^1.0.1",
+    "fs": "^0.0.1-security"
   }
 }

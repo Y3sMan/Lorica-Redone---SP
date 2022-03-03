@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<style> 
+
+/* ------------------------------- PERKS, center column--------------------------------- */
+#perklists {
+  overflow-y: auto;
+  width: 18%;
+  height: 90%;
+  text-align: center;
+  float: right;
+  /*! position: absolute; */
+  left: 10%;
+  bottom: 1%;
+}	
+
+#perklists button {
+	font-family: Sovngarde;
+	width: 100%;
+	height: 50px;
+	font-size: 30px;
+	text-align: center;
+	/* vertical-align: center; */
+	/* vertical-align: text-top; */
+	background-color: black;
+	color: white;
+	display: block;
+	text-decoration: none;
+	/* <!-- padding: 30px 30px; --> */
+}
+
+#perklists div.hidden {
+	display: none;
+}
+
+#perklists button:hover {
+  background-color: #ccc;
+}
+
+#perklists button.active {
+  background-color: gray;
+  color: white;
+}
+
+/* ---------------------------CONFIRM/CANCEL BUTTONS ----------------------------- */
+
+
+#exitbtns > button {
+  position: absolute;
+  font-family: Sovngarde;
+	font-size: 30px;
+	text-align: center;
+	background-color: black;
+	color: white;
+	display: block;
+	text-decoration: none;
+  width: 50%;
+}
+
+#exitbtns {
+  width: 10%;
+  height: 5%;
+  bottom: 5%;
+  right: 25%;
+}
+
+#message-box {
+  background-color: black;
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 25%;
+  width: 15%;
+  border-style: solid;
+  border-color: #999;
+  position: relative;
+  float: right;
+  right: 41.8895% !important;
+  top: -60.2219% !important;
+  z-index: 99;
+}
+#confirmbtns > button {
+  position: absolute;
+  font-family: Sovngarde;
+  font-size: 30px;
+  text-align: center;
+  background-color: black;
+  color: white;
+  display: block;
+  text-decoration: none;
+  width: 25%;
+}
+
+#message-box.hidden {
+  display: none;
+}
+
+</style>
+
+</head>
+<body style="height: 75vh;width: 100%;position: absolute;">
+<audio id="menuopen">
+  <source src="../../G:/SteamLibrary/steamapps/common/Skyrim Special Edition/Data/sounds/sound/fx/ui/skills/transition/up/ui_skills_transitionup_02.wav" type="audio/wav">
+</audio>
+<div id="background" style="height: 100%;width: 100%" class="relative"></div>
+<div id="perklists" class="absolute">
+		<div class="vertical-menu" id="ALTERATIONPERKS">
+		</div>
+	</div>
+    <div id="exitbtns" class="absolute" style="bottom: 1.40164% !important;">
+	<button id="confirm" class="button" style=" " onclick="ShowMsgBox();">Confirm</button>
+	<button id="close" class="button" onclick="window.skyrimPlatform.sendMessage('Exit' );" style="left: 52.168% !important;">Exit</button>
+	</div>
+	<div id="message-box" class="msgbox relative hidden">
+		<div id="confirmbtns" class="absolute" style="width: 100%;bottom: 1%;height: 20%;">
+			<button id="confirm" class="button" onclick="window.skyrimPlatform.sendMessage('Accept' );ShowMsgBox();" style="left: 15.795% !important; /*! top: 51.2425% !important; */">Confirm</button>
+			<button id="close" class="button" onclick="window.skyrimPlatform.sendMessage('Close' );ShowMsgBox();" style="left: 60.6289% !important; /*! bottom: 6.02246% !important; */">Close</button>
+	</div>
+</div>
+    
+<script>
+function ShowPerkList(perktree) { /* function to hide the vertical-menu of buttons for the perktrees*/
+	var header = document.getElementById("perklists");
+	var hiddens = header.getElementsByClassName("vertical-menu");
+	for (var i = 0; i < hiddens.length; i++) {
+		if (!(hiddens[i].className.includes("hidden"))){
+			hiddens[i].className += " hidden";
+		}
+	}
+	perktree = (perktree + "perks").toUpperCase();
+	header = document.getElementById(perktree);
+	if (header.className.includes("hidden")){
+		header.className = header.className.replace(" hidden", "");
+	}
+}
+
+
+// Add active class to the current button (highlight it)
+var header = document.getElementById("perktreelist");
+var btns = header.getElementsByClassName("button");
+for (var i = 0; i < btns.length; i++) {
+  btns[i].addEventListener("click", function() {
+  var current = document.getElementsByClassName("active");
+  if (current.length > 0) { 
+    current[0].className = current[0].className.replace(" active", ""); /* deactivates button and its corresponding perks list*/
+  }
+  var perktree = this.innerHTML
+  perktree = perktree.replace(/\s/g, '');
+  perktree = perktree.replace(/\s/g, '-');
+  ShowPerkList(perktree)
+  this.className += " active"; /* activates button and its corresponding perks list*/
+  });
+}
+// add active class to perklist buttons
+var header = document.getElementById("perklists");
+var btns = header.getElementsByClassName("button");
+for (var i = 0; i < btns.length; i++) {
+  btns[i].addEventListener("click", function() {
+  var current = document.getElementsByClassName("active");
+  if (current.length > 0) { 
+    current[0].className = current[0].className.replace(" active", ""); /* deactivates button and its corresponding perks list*/
+  }
+  this.className += " active"; /* activates button and its corresponding perks list*/
+  });
+}
+
+/* these are the functions I call in typescript through browser.executeJavascript() */
+function AddPerks(tree, perk, perkform) {
+	tree = tree + "perks"
+	var completelist = document.getElementById((tree).toUpperCase());
+	// <!-- window.skyrimPlatform.sendMessage(perk) -->
+	var btn = document.createElement("BUTTON");
+	var clss = document.createAttribute("class");
+	var clk = document.createAttribute("onclick");
+	clss.value = "button";
+	clk.value = "window.skyrimPlatform.sendMessage('" + perkform + "');"
+	btn.setAttributeNode(clss);
+	btn.setAttributeNode(clk);
+	btn.innerHTML = `${perk}`
+	completelist.appendChild(btn);
+}
+
+var snd = document.getElementById("menuopen");
+
+function MenuOpenSnd() {
+	snd.play();
+}
+
+
+
+function ShowMsgBox(){
+	var msg = document.getElementById("message-box");
+	if (msg.className.includes("hidden")) { 
+		msg.className = msg.className.replace(" hidden", ""); /* deactivates button and its corresponding perks list*/
+	}
+	else {
+		msg.className += " hidden"; /* activates button and its corresponding perks list*/
+	}
+	
+}
+
+</script>
+
+
+
+</body>
+</html>
