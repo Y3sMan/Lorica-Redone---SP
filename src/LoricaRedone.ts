@@ -2,10 +2,12 @@ import { on, printConsole, Form, Game, Message, Actor, ObjectReference, Spell, D
 import { SetIntValue, GetIntValue, FormListHas, GetFloatValue, FormListAdd, UnsetIntValue, AdjustIntValue, FormListCount, FormListRemove, FormListGet } from  "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListHas as UpkeepListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { IntToString, HasActiveSpell, GetAllSpells, GivePlayerSpellBook } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
-import { pl, juKeys, suKeys, UIUpdateDebuffMeter } from "./YM_Lorica_Shared"
+import { pl, juKeys, suKeys, UIUpdateDebuffMeter, FormToString } from "./YM_Lorica_Shared"
 import { mainCompat } from "./YM_Lorica_Compat"
 import { mainUtilitySpells } from "./YM_Lorica_UtilitySpells"
 import { mainMCM } from "./YM_Lorica_MCM"
+import { fchmod } from "fs";
+import { debug } from "util";
 
 mainMCM();
 mainUtilitySpells();
@@ -25,32 +27,122 @@ once('update', () => {
 })
 // --------------------------------DUAL CAST CHECK----------------------------
 // hook into dual cast magic animation to doubly check if spell was dual cast [check]
+// getEquippedSpell(0) == left hand
+// getEquippedSpell(1) == right hand
 let bDualCast = false
+let bUpkeepCast = false
+var fChargeTimerR: number = 0
+var fChargeTimerL: number = 0
+var Spellduration: number = 0
 hooks.sendAnimationEvent.add({
 	enter(ctx) {
-		if (ctx.animEventName.toUpperCase().includes("DUALMAGIC")) { bDualCast = true; }
-		else { bDualCast = false; }
-		once('update', () => {
-			const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
-			if ( !equippedRight ) { return; };
-			const sDualCast = "LoricaRedone" + equippedRight.getName() + "DualCast";
-			if ( !equippedRight || !sDualCast ) { return; };
+		let animEvent = ctx.animEventName.toLowerCase()
+		// printConsole(animEvent);
+		if (animEvent.includes("dualmagic")) { 
+			once('update', () => {
+				const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
+				if ( !equippedRight ) { return; };
+				const sDualCast = "LoricaRedone" + equippedRight.getName() + "DualCast";
+				if ( !equippedRight || !sDualCast ) { return; };
 
-			if ( bDualCast ) {
-				SetIntValue(null, sDualCast, 1);
-				printConsole('sendAnimationEvent:: dual cast check: ' + GetIntValue(null, sDualCast, 0));
-			}
-			// else { SetIntValue(null, sDualCast, 0); }	
-		});
+				if ( bDualCast ) {
+					SetIntValue(null, sDualCast, 1);
+					// printConsole('sendAnimationEvent:: dual cast check: ' + GetIntValue(null, sDualCast, 0));
+				}
+			});
+		}
+		// ----------------------------------------cast charge stuff----------------------------------------
+		if (animEvent.includes("spellready") ) { 
+			once('update', () => {
+				bUpkeepCast = true;
+				const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
+				const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
+				if ( animEvent.includes('mlh') ) { 
+					if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedLeft) || FormListHas(null, suKeys.formAppliedList, equippedLeft) ) { bUpkeepCast = false; ; fChargeTimerR = 0; return; }
+						on('update', () => { 
+							if ( bUpkeepCast ) { 
+								fChargeTimerL++
+								const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
+								Spellduration = SetDuration( fChargeTimerL, equippedLeft);
+								if ( (fChargeTimerL / 60) > 300 ) {bUpkeepCast = false; fChargeTimerL = 0; }
+							}
+						})
+					}
+				if ( animEvent.includes('mrh') ) {
+					if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedRight) || FormListHas(null, suKeys.formAppliedList, equippedRight) ) { bUpkeepCast = false; fChargeTimerR = 0; return; }
+					on('update', () => { 
+						if ( bUpkeepCast ) { 
+							fChargeTimerR++
+							const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
+							Spellduration = SetDuration( fChargeTimerR, equippedRight);
+							if ( (fChargeTimerR / 60) > 300 ) {bUpkeepCast = false; fChargeTimerR = 0; }
+						}	
+					})
+				}
+			})
+		}
+		if (animEvent.includes("spellrelease") || animEvent.includes('equipped_event') || animEvent.includes('unequip') ) { bUpkeepCast = false; fChargeTimerL = 0;fChargeTimerR = 0; }
+		if (animEvent.includes("spellrelease") ) { 
+			once('update', () => {
+			// if (lambda()) {return}
+				MessageDurationResult(Spellduration)
+			})
+		}
+			
 	},
-	leave(ctx) {
-		
-	}
+	leave(ctx) {}
 },  0x14, 0x14); // filter out non-player events
 
+function MessageDurationResult(duration: number) {
+	duration /= 60
+	duration = Math.floor(duration)
+	// if ( duration > 0 && duration < 7 ) { }
+	const w =async () => {
+		await Utility.wait(0.2)
+		Debug.notification(`Spell has been charged enough to last ${duration} minutes!`) 
+	}
+	w()
+}
+
+const ChargeTime_V_Cost_Equation = function (spell: Form) {
+	const fCost = Spell.from(spell).getEffectiveMagickaCost(pl());
+	// equation ( charge_time is seconds spell needs to be charged to reach max spell duration )
+	// 				 {	6.4e-4 * (x-10)^2	0 <= x <= 100
+	// charge_time = |	
+	// 				 {	5					x >= 100
+	let charge_time = 0
+	if ( fCost >= 0 && fCost < 100 ) { charge_time = 6.4e-4 * (fCost - 10)**2 }
+	if ( fCost >= 100 ) { charge_time = 5;}
+	return Math.floor(charge_time)
+}
+
+const Duration_V_ChargeTime = function (charge_timer: number, spell: Form) {
+	let charge_calculated = ChargeTime_V_Cost_Equation(spell)
+	// printConsole(charge_calculated)
+	// equation
+	// duration is in minutes, and is converted to seconds
+	// duration = (9/5)*charge_time + 1		0 <= charge_time <= 5 minutes
+	// duration = 10						charge_time >= 5 minutes
+	// input charge_timer ( in seconds) should be the charge timer in the loop, NOT the calculated number from the equation ChargeTime_V_Cost_Equation
+	charge_timer /= 60 // divide by 60 as the timer increments 60 times a second
+	if ( charge_timer > 5 ) { return 600; }
+	if ( charge_timer >= charge_calculated ){ return 600 }
+	
+	const duration =  ((9/5)*charge_timer + 2) * 60
+	// printConsole(cha)
+	if ( duration < 600 ) { return duration }
+	if ( duration >= 600 ) { return 600 }
+	// return
+}
+
+function SetDuration(charge_timer: number, spell: Form) {
+	let duration: number = Duration_V_ChargeTime(charge_timer, spell)
+	let s = Spell.from(spell)
+	s.setNthEffectDuration(0, duration)
+	return duration
+}
 //---------------------------MAIN--------------------------------------------
 on('spellCast', (event) => {
-	printConsole("hello");
 	// const caster = Actor.from(event.caster.getBaseObject()) // event castor as Actor
 	const castspell = Form.from(event.spell) // event spell as Form
 	// const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
@@ -83,7 +175,7 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 		pl().dispelSpell(Spell.from(spell));
 	}
 	
-	printConsole("ToggleSpell:: running")
+	// printConsole("ToggleSpell:: running")
 	option = option.toLowerCase()
 
 	const spellCum =  Spell.from(Game.getFormFromFile(0x1A33, "Lorica Redone.esp")) // the spell responsible for the Cumulative penalty
@@ -107,7 +199,7 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 		try {
 			
 			if (equippedRight.getFormID() == equippedLeft.getFormID() && GetIntValue(null, sDualCast, 0) == 1){
-				printConsole('ToggleSpell: dualcast check => Good!');
+				// printConsole('ToggleSpell: dualcast check => Good!');
 				fMag *= 2
 				iCum *= 2
 				SetIntValue(null, sDualCast, 1)
@@ -150,7 +242,7 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 	};
 	const newUpkeep = AdjustIntValue(null, suKeys.iUpkeepTotal, fMag);
 	const newCum = AdjustIntValue(null, suKeys.iCumTotal, iCum);
-	printConsole(` newUpkeep: ${newUpkeep}\n newCum: ${newCum}`)
+	// printConsole(` newUpkeep: ${newUpkeep}\n newCum: ${newCum}`)
 	
 	if ( newUpkeep  < 0 ){ SetIntValue(null, suKeys.iUpkeepTotal, 0); };
 	if ( newCum < 0 ) { SetIntValue(null, suKeys.iCumTotal, 0); };
@@ -166,13 +258,13 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 		const spellCum =  Spell.from(Game.getFormFromFile(0x001A33, "Lorica Redone.esp")) 
 		const badded = pl().addSpell(spellUpkeep, false);
 		pl().addSpell(spellCum, false);
-		if ( !badded ) { printConsole("failed"); }; 
+		// if ( !badded ) { printConsole("failed"); }; 
 		
 	}
 	addingspells();
 	
 	UIUpdateDebuffMeter();
-	printConsole(`ToggleSpell Has => ${FormListHas(null, suKeys.formAppliedList, spell!)}`)
+	// printConsole(`ToggleSpell Has => ${FormListHas(null, suKeys.formAppliedList, spell!)}`)
 };
 
 

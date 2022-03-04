@@ -21,19 +21,10 @@ export let mainCompat = () => {
 			for ( let i = 0; i < allspells.length; i++ ) {
 				const formSpell = Form.from(allspells[i]);
 				
-				// check if spell is in the Conjuration school; bugged, some Destruction spells return 'true'; use isRightSpellType()
-				const AscSkill = async (f: Form) => {
-					const E = Spell.from(f)?.getNthEffectMagicEffect(0);
-					const skill = await E.getAssociatedSkill();
-					if ( skill.toLowerCase() == ("conjuration") ) { return true }
-					else { return false }
-				};
-				
-				
 				if ( !FormListHas(juKeys.path, suKeys.formBlackList, formSpell) ) {
 					if ( isRightSpellType(formSpell!) ) {
 						FormListAdd(juKeys.path, suKeys.formUpkeepList, formSpell, false);
-						formlistUpkeep?.addForm(formSpell);
+						// formlistUpkeep?.addForm(formSpell);
 					};
 				};
 			};
@@ -49,7 +40,7 @@ export let mainCompat = () => {
 	}); 
 }
 
-export function UpdateAllSpells() {SetCosts('all'); ClearFromLorica() }
+export function UpdateAllSpells() { SetCosts('all'); ClearFromLorica() }
 
 function ClearFromLorica(){
 	let allspells = UpkeepArray(juKeys.path, suKeys.formUpkeepList)
