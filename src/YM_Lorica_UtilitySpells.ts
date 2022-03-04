@@ -8,11 +8,9 @@ import { SetCosts } from "./YM_Lorica_Compat";
 
 
 export function DispelSpells(option: string = '') {
-	printConsole(`DispelSpells:: FormListCount(null, suKeys.formAppliedList) => ${FormListCount(null, suKeys.formAppliedList)}`)
-	if ( option.toLowerCase() == 'all' ){ ToggleSpell('zero'); }
 	for ( let i = 0; i < FormListCount(null, suKeys.formAppliedList); i++ ) { 
 		const F = FormListGet(null, suKeys.formAppliedList, i);
-		if ( FormListHas(juKeys.path, suKeys.formExclusionList, F) && option.toLowerCase()== 'exclusive') { break; };
+		if ( FormListHas(juKeys.path, suKeys.formExclusionList, F) && option.toLowerCase() == 'exclusive') { continue;}
 		ToggleSpell("off", F)
 	}
 };
@@ -23,9 +21,13 @@ export let mainUtilitySpells = () => {
 	on('effectStart', (event) => { 
 		const mgefDispel = Game.getFormFromFile(0x181A, "Lorica Redone.esp")?.getFormID();
 		// -----------------DISPEL--------------------------------------------------------------
-		if ( event.effect.getFormID() == mgefDispel ) { flag = true; DispelSpells('exclusive'); }
+		if ( event.effect.getFormID() == mgefDispel ) { flag = true; DispelSpells('exclusive'); printConsole("it ran") }
 		if ( event.effect.getFormID() == mgefDispel && i < 300 && i > 0 ) { i = 0; flag = false; DispelSpells("ALL"); };
-		
+		// -------DISPEL TIMER-----------------------------------
+		on('update', () => {
+			if ( flag ) { i++; };
+			if ( i > 300 ) { i = 0; flag = false; };
+		});
 		// ------------when 'Add Spell' is triggered-----------------------------------------
 		const mgefAddspell = Game.getFormFromFile(0x001822, "Lorica Redone.esp")?.getFormID();
 		if ( event.effect.getFormID() == mgefAddspell ) { 
@@ -34,14 +36,10 @@ export let mainUtilitySpells = () => {
 			if ( !left || !right ){ return; };
 			SetCosts("single", left);
 			SetCosts("single", right);
-			printConsole("mainAddSpellspell:: it worked"); 
+			// printConsole("mainAddSpellspell:: it worked"); 
 		};
 	});
-	// -------DISPEL TIMER-----------------------------------
-	on('update', () => {
-		if ( flag ) { i++; };
-		if ( i > 300 ) { i = 0; flag = false; };
-	});
+	
 };
 
 
