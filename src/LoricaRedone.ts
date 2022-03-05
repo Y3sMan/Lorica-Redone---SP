@@ -52,40 +52,46 @@ hooks.sendAnimationEvent.add({
 			});
 		}
 		// ----------------------------------------cast charge stuff----------------------------------------
+		const isInWrongLists = function (spell: Form) {
+			if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, spell) || FormListHas(null, suKeys.formAppliedList, spell) ) {
+				return true; 
+			}
+		}
 		if (animEvent.includes("spellready") ) { 
-			once('update', () => {
-				bUpkeepCast = true;
-				const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
-				const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
-				if ( animEvent.includes('mlh') ) { 
-					if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedLeft) || FormListHas(null, suKeys.formAppliedList, equippedLeft) ) { bUpkeepCast = false; ; fChargeTimerR = 0; return; }
-						on('update', () => { 
-							if ( bUpkeepCast ) { 
-								fChargeTimerL++
-								const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
-								Spellduration = SetDuration( fChargeTimerL, equippedLeft);
-								if ( (fChargeTimerL / 60) > 300 ) {bUpkeepCast = false; fChargeTimerL = 0; }
-							}
-						})
-					}
-				if ( animEvent.includes('mrh') ) {
-					if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedRight) || FormListHas(null, suKeys.formAppliedList, equippedRight) ) { bUpkeepCast = false; fChargeTimerR = 0; return; }
+			const SpellDurationBlock = function (spellHand: String, timer: number, flag: boolean, duration: number) {
+				let equipped: Form
+				let eventName: string = ''
+				
+				if ( spellHand.toLowerCase() == 'left') { equipped = Form.from(Game.getPlayer().getEquippedSpell(0)); eventName = 'mlh'; }
+				if ( spellHand.toLowerCase() == 'right') { equipped = Form.from(Game.getPlayer().getEquippedSpell(1)); eventName = 'mrh'; }
+				if ( isInWrongLists(equipped!) ) { timer = 0; flag = false; return };
+				
+				if ( animEvent.includes(eventName) ) { 
 					on('update', () => { 
-						if ( bUpkeepCast ) { 
-							fChargeTimerR++
-							const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
-							Spellduration = SetDuration( fChargeTimerR, equippedRight);
-							if ( (fChargeTimerR / 60) > 300 ) {bUpkeepCast = false; fChargeTimerR = 0; }
-						}	
+						if ( spellHand.toLowerCase() == 'left') { equipped = Form.from(Game.getPlayer().getEquippedSpell(0)) }
+						if ( spellHand.toLowerCase() == 'right') { equipped = Form.from(Game.getPlayer().getEquippedSpell(1)) }
+						if ( isInWrongLists(equipped!) ) { timer = 0; flag = false; return };
+						if ( flag ) { 
+							timer++
+							duration = SetDuration( timer, equipped);
+							if ( (timer / 60) > 300 ) {flag = false; timer = 0; }
+						}
 					})
 				}
+			}
+			once('update', () => {
+				bUpkeepCast = true;
+				printConsole(fChargeTimerL)
+				SpellDurationBlock('left', fChargeTimerL, bUpkeepCast, Spellduration)
+				SpellDurationBlock('right', fChargeTimerR, bUpkeepCast, Spellduration)
 			})
 		}
 		if (animEvent.includes("spellrelease") || animEvent.includes('equipped_event') || animEvent.includes('unequip') ) { bUpkeepCast = false; fChargeTimerL = 0;fChargeTimerR = 0; }
 		if (animEvent.includes("spellrelease") ) { 
 			once('update', () => {
-			// if (lambda()) {return}
-				MessageDurationResult(Spellduration)
+				let left = Form.from(Game.getPlayer().getEquippedSpell(0)); 
+				let right = Form.from(Game.getPlayer().getEquippedSpell(1));
+				if ( !isInWrongLists(left) || !isInWrongLists(right) )	{MessageDurationResult(Spellduration)}
 			})
 		}
 			
