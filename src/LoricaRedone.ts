@@ -40,7 +40,7 @@ hooks.sendAnimationEvent.add({
 		// printConsole(animEvent);
 		if (animEvent.includes("dualmagic")) { 
 			once('update', () => {
-				const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
+				const equippedRight = Form.from(Game.getPlayer()!.getEquippedSpell(1));
 				if ( !equippedRight ) { return; };
 				const sDualCast = "LoricaRedone" + equippedRight.getName() + "DualCast";
 				if ( !equippedRight || !sDualCast ) { return; };
@@ -54,36 +54,48 @@ hooks.sendAnimationEvent.add({
 		// ----------------------------------------cast charge stuff----------------------------------------
 		const isInWrongLists = function (spell: Form) {
 			if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, spell) || FormListHas(null, suKeys.formAppliedList, spell) ) {
-				return true; 
+				return true;
 			}
 		}
 		if (animEvent.includes("spellready") ) { 
-			const SpellDurationBlock = function (spellHand: String, timer: number, flag: boolean, duration: number) {
-				let equipped: Form
-				let eventName: string = ''
-				
-				if ( spellHand.toLowerCase() == 'left') { equipped = Form.from(Game.getPlayer().getEquippedSpell(0)); eventName = 'mlh'; }
-				if ( spellHand.toLowerCase() == 'right') { equipped = Form.from(Game.getPlayer().getEquippedSpell(1)); eventName = 'mrh'; }
-				if ( isInWrongLists(equipped!) ) { timer = 0; flag = false; return };
-				
-				if ( animEvent.includes(eventName) ) { 
-					on('update', () => { 
-						if ( spellHand.toLowerCase() == 'left') { equipped = Form.from(Game.getPlayer().getEquippedSpell(0)) }
-						if ( spellHand.toLowerCase() == 'right') { equipped = Form.from(Game.getPlayer().getEquippedSpell(1)) }
-						if ( isInWrongLists(equipped!) ) { timer = 0; flag = false; return };
-						if ( flag ) { 
-							timer++
-							duration = SetDuration( timer, equipped);
-							if ( (timer / 60) > 300 ) {flag = false; timer = 0; }
-						}
-					})
-				}
-			}
 			once('update', () => {
 				bUpkeepCast = true;
-				printConsole(fChargeTimerL)
-				SpellDurationBlock('left', fChargeTimerL, bUpkeepCast, Spellduration)
-				SpellDurationBlock('right', fChargeTimerR, bUpkeepCast, Spellduration)
+				fChargeTimerL = 0
+				fChargeTimerR = 0
+				const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
+				const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
+				if ( animEvent.includes('mlh') ) { 
+					if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedLeft) || FormListHas(null, suKeys.formAppliedList, equippedLeft) ) { bUpkeepCast = false; ; fChargeTimerR = 0; return; }
+						on('update', () => { 
+							if ( bUpkeepCast ) { 
+								const w = async () => {
+									await Utility.wait(0.5)
+									Debug.notification('Spell is charging!')
+									fChargeTimerL++
+								}
+								w()
+								const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
+								Spellduration = SetDuration( fChargeTimerL, equippedLeft);
+								if ( (fChargeTimerL / 60) > 300 ) {bUpkeepCast = false; fChargeTimerL = 0; }
+							}
+						})
+				}
+				if ( animEvent.includes('mrh') ) {
+					if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedRight) || FormListHas(null, suKeys.formAppliedList, equippedRight) ) { bUpkeepCast = false; fChargeTimerR = 0; return; }
+					on('update', () => { 
+						if ( bUpkeepCast ) { 
+							const w = async () => {
+								await Utility.wait(0.5)
+								Debug.notification('Spell is charging!')
+								fChargeTimerR++
+							}
+							w()
+							const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
+							Spellduration = SetDuration( fChargeTimerR, equippedRight);
+							if ( (fChargeTimerR / 60) > 300 ) {bUpkeepCast = false; fChargeTimerR = 0; }
+						}	
+					})
+				}
 			})
 		}
 		if (animEvent.includes("spellrelease") || animEvent.includes('equipped_event') || animEvent.includes('unequip') ) { bUpkeepCast = false; fChargeTimerL = 0;fChargeTimerR = 0; }
@@ -91,7 +103,8 @@ hooks.sendAnimationEvent.add({
 			once('update', () => {
 				let left = Form.from(Game.getPlayer().getEquippedSpell(0)); 
 				let right = Form.from(Game.getPlayer().getEquippedSpell(1));
-				if ( !isInWrongLists(left) || !isInWrongLists(right) )	{MessageDurationResult(Spellduration)}
+				if ( animEvent.includes('mrh') ) {if (!isInWrongLists(right)) {MessageDurationResult(Spellduration)}}
+				if ( animEvent.includes('mlh') ) {if ( !isInWrongLists(left)) {MessageDurationResult(Spellduration)}} 
 			})
 		}
 			
@@ -113,32 +126,32 @@ function MessageDurationResult(duration: number) {
 const ChargeTime_V_Cost_Equation = function (spell: Form) {
 	const fCost = Spell.from(spell).getEffectiveMagickaCost(pl());
 	// equation ( charge_time is seconds spell needs to be charged to reach max spell duration )
-	// 				 {	6.4e-4 * (x-10)^2	0 <= x <= 100
+	// 				 {	6.4e-4 * (x+20)^2	0 <= x <= 100
 	// charge_time = |	
-	// 				 {	5					x >= 100
+	// 				 {	10					x >= 100
 	let charge_time = 0
-	if ( fCost >= 0 && fCost < 100 ) { charge_time = 6.4e-4 * (fCost - 10)**2 }
-	if ( fCost >= 100 ) { charge_time = 5;}
-	return Math.floor(charge_time)
+	let solution = 20 // solution to the first part of the step function, this 'fCost + 40**2' is of course -40. A spell costing 40 or below has to charge
+	let upper_step = 10
+	if ( fCost <= solution ) { charge_time = 0; } // first step function to bound system to constant min y i.e. less than your min cost charge_time = 0
+	if ( fCost >= 0 && fCost < 100 ) { charge_time = 6.4e-4 * ((fCost - solution)**2) } 
+	if ( fCost >= 100 ) { charge_time = upper_step;} // the max any spell should charge is 10 seconds; second step function to bound the system to some constant y
+	return Math.ceil(charge_time)
 }
 
 const Duration_V_ChargeTime = function (charge_timer: number, spell: Form) {
-	let charge_calculated = ChargeTime_V_Cost_Equation(spell)
-	// printConsole(charge_calculated)
 	// equation
 	// duration is in minutes, and is converted to seconds
 	// duration = (9/5)*charge_time + 1		0 <= charge_time <= 5 minutes
 	// duration = 10						charge_time >= 5 minutes
 	// input charge_timer ( in seconds) should be the charge timer in the loop, NOT the calculated number from the equation ChargeTime_V_Cost_Equation
+	
+	let charge_calculated = ChargeTime_V_Cost_Equation(spell)
 	charge_timer /= 60 // divide by 60 as the timer increments 60 times a second
-	if ( charge_timer > 5 ) { return 600; }
 	if ( charge_timer >= charge_calculated ){ return 600 }
 	
-	const duration =  ((9/5)*charge_timer + 2) * 60
-	// printConsole(cha)
-	if ( duration < 600 ) { return duration }
+	const duration =  ((9/10)*charge_timer + 1) * 60
+	if ( duration < 600 ) { return Math.round(duration) }
 	if ( duration >= 600 ) { return 600 }
-	// return
 }
 
 function SetDuration(charge_timer: number, spell: Form) {
@@ -189,22 +202,22 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 	
 	const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
 
-	const spellstring = IntToString(spell?.getFormID(), true) // exclamation mark assures compiler that variable will be there
+	const spellstring = IntToString(spell?.getFormID()!, true) // exclamation mark assures compiler that variable will be there
 	let fMag = GetFloatValue(null, spellstring, 0);
 	let iCum = Math.floor(fMag * (GetFloatValue(null, suKeys.fCumFraction, 0.20))); // get the cumulative increase from the argument spell, rounded down
 	// remove upkeep and cumulative spells for adjustment
-	pl().removeSpell(spellCum);
-	pl().removeSpell(spellUpkeep);
+	pl()!.removeSpell(spellCum);
+	pl()!.removeSpell(spellUpkeep);
 	// get currently equipped spells to check for dual-cast
-	const equippedLeft = Form.from( Game.getPlayer().getEquippedSpell(0));
-	const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
-	const sDualCast = "LoricaRedone" + equippedRight.getName() + "DualCast";
+	const equippedLeft = Form.from( Game.getPlayer()!.getEquippedSpell(0));
+	const equippedRight = Form.from(Game.getPlayer()!.getEquippedSpell(1));
+	const sDualCast = "LoricaRedone" + equippedRight!.getName() + "DualCast";
 	if (option.includes("on")){
 		FormListAdd(null, suKeys.formAppliedList, spell!, true); // add form to list of applied spells
-		formlistApplied.addForm(spell!);
+		formlistApplied!.addForm(spell!);
 		try {
 			
-			if (equippedRight.getFormID() == equippedLeft.getFormID() && GetIntValue(null, sDualCast, 0) == 1){
+			if (equippedRight!.getFormID() == equippedLeft!.getFormID() && GetIntValue(null, sDualCast, 0) == 1){
 				// printConsole('ToggleSpell: dualcast check => Good!');
 				fMag *= 2
 				iCum *= 2
