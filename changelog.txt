@@ -1,0 +1,42 @@
+Lorica Redone Changelog
+version 4.0.0
+-reworked mcm; now requires MCM Helper
+-now requires SPID
+-reworked debuff system:
+1. mgeff's added to spells are now just dummy spells; they only act to dynamically add a description to each spell
+2. main debuff is now one constant ability 
+-added cumulative cost; also a constant ability
+-added Utility Spell system; certain spells will be excluded from dispel
+-modifies game's lesser power cooldown on startup to be very, very, very small; allows spamming dispel ability
+-activating dispel ability twice dispels all spells, utility or not
+-all conjuration spells now work as intended:
+added spell distributed to every NPC via SPID that checks for actor death and reanimation
+-fixed dual wielding conjuration spells
+
+
+version 3.0.1
+-changed DispelAll script to use function; will utilize property to do cross-script dispel stuff later
+-fixed DispelAll script to correctly cleanup lists
+-EffectFinish script now properly cleans up the Applied Formlist so costs adjust properly again
+-Made function to run every PlayerLoadSaveGame to check if its first save load, then properly dispel spells to prevent any catastrophe
+
+version 3.0.0
+
+-The top MCM reminder now serves as a dispel button
+-Can no longer add an equipped shout as a toggle spell; needs to be worked
+-Built in safety checks for most MCM options if player still has spells active, but player should still be careful
+-Upkeep total now resets properly when turning the mod on and off
+-Added a dynamic condition function to each debuff
+-EffectFinish script now properly removes spells from lists after each finish
+-Summon Spells are now supported. Toggle them on and toggle them off, like normal. Summons are no longer aimed spells; just cast, and they appear close to you. Raise Dead spells are still not working though.
+-Bound spells now supported, as well as duel-wielding.
+-Moved away from native formlists and arrays for the major processing, now utilizes PapyrusUtils key lists
+-Because of the afore point, the 128 spell limit should be gone. I have not tested this, but the limitations of the native arrays are gone, so there should be no limit.
+-Added an "Add Spell" power to quickly add spells to Lorica.
+-Changed "Dispel Spells" to be a power; you no longer have to cast from your hand to dispel.
+-EXP script now checks if the player is in combat. No more exp when spells are active, but you're just strolling around.
+-Reworked cleanup scripts, so spells properly cleanup from my lists and dispel to remove any extra effects. Makes summons and bounds compatible.
+-Added a dynamic condition system. Each debuff will calculate a dynamic condition based on the spell it's being attached to, so that if the spell becomes inactive, but doesn't dispel, the debuff should be inactive too.
+-Added a system to gather your mod list information, and the spells from your mods. Needed in order to fill out the dynamic conditions. Should only need to run when you change your plugin count, or to first construct the list.
+-On first initialization, spells should dispel, to fix a bug with everything messing up and debuffs recalculating as zero. On save load, it should be fine.
+-Changed the calculation made at each spell cast to determine if the player can both cast and maintain the spell. Should be more robust now.

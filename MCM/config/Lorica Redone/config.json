@@ -1,0 +1,385 @@
+{
+  "modName": "Lorica Redone",
+  "displayName": "Lorica Redone",
+  "pages": [
+    {
+      "pageDisplayName": "Main Page",
+      "cursorFillMode": "topToBottom",
+      "content": [
+        {
+          "text": "Activate",
+          "type": "header"
+        },
+        {
+          "id": "bLoricaOn",
+          "text": "Mod Enabled",
+          "type": "toggle",
+          "help": "Turn the mod on or off.",
+          "valueOptions": {
+            "sourceType": "GlobalValue",
+            "sourceForm": "Lorica Redone.esp|80d",
+            "propertyName": "AIX_UpkeepOn",
+            "defaultValue": "1.0"
+          }
+        },
+        {
+          "id": "bAutoCompatibility:Main",
+          "text": "Auto Compatibility",
+          "type": "toggle",
+          "help": "Turn the mod on or off.",
+          "valueOptions": {
+            "defaultValue": "True",
+            "sourceType": "ModSettingBool"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "text": "Main",
+          "type": "header"
+        },
+        {
+          "text": "Rememeber, before changing anything, dispel your spells!",
+          "type": "toggle",
+          "action": {
+            "type": "CallFunction",
+            "function": "ResetActiveToggledSpells"
+          }
+        },
+        {
+          "text": "Add Spell",
+          "type": "text",
+          "help": "Add a spell to Lorica Redone.",
+          "valueOptions": {
+            "value": "click"
+          },
+          "action": {
+            "type": "CallFunction",
+            "function": "AddSpellToLorica"
+          }
+        },
+        {
+          "id": "fCostMultiplier:Main",
+          "text": "Cost Multiplier",
+          "type": "slider",
+          "help": "The multiplier for non-ritual spells to be multiplied by to determine their debuff",
+          "valueOptions": {
+            "min": 0.25,
+            "max": 5,
+            "step": 0.01,
+            "formatString": "{2}",
+            "sourceType": "ModSettingFloat",
+            "defaultValue": 0.5
+          }
+        },
+        {
+          "id": "fRitualCostMultiplier:Main",
+          "text": "Ritual Cost Multiplier",
+          "type": "slider",
+          "help": "The multiplier for ritual spells to be multiplied by to determine their debuff",
+          "valueOptions": {
+            "min": 0.25,
+            "max": 5,
+            "step": 0.01,
+            "formatString": "{2}",
+            "sourceType": "ModSettingFloat",
+            "defaultValue": 2
+          }
+        },
+        {
+          "id": "iExperienceRefreshRate:Main",
+          "text": "Experience Refresh Rate",
+          "type": "slider",
+          "help": "The time it takes to check if experience is gained while spells are toggled",
+          "valueOptions": {
+            "min": 1,
+            "max": 120,
+            "step": 1,
+            "formatString": "{1}",
+            "sourceType": "ModSettingInt",
+            "defaultValue": 60
+          }
+        },
+        {
+          "id": "fExperienceMult:Main",
+          "text": "Experience Multiplier",
+          "type": "slider",
+          "help": "The amount to multiply the experience by.",
+          "valueOptions": {
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "formatString": "{2}",
+            "sourceType": "ModSettingFloat",
+            "defaultValue": 2
+          }
+        },
+        {
+          "id": "iMinCost:Main",
+          "text": "Minimum Debuff Cost",
+          "type": "slider",
+          "help": "The minimum cost any debuff will have.",
+          "valueOptions": {
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "formatString": "{2}",
+            "sourceType": "ModSettingInt",
+            "defaultValue": 15
+          }
+        },
+        {
+          "id": "fCumMinPenalty:Main",
+          "text": "Minimum Cumulative Penalty Multiplier",
+          "type": "slider",
+          "help": "Minimum Penalty Multiplier. Set to 0 to disable Penalty.",
+          "valueOptions": {
+            "min": 0,
+            "max": 5,
+            "step": 0.01,
+            "formatString": "{2}",
+            "sourceType": "ModSettingFloat",
+            "defaultValue": 0.25
+          }
+		},
+    {
+      "text": "Spell Charging",
+      "type": "header"
+    },
+    {
+      "id": "iChargeMaxDuration:Charge",
+      "text": "Max Duration",
+      "type": "slider",
+      "help": "Maximum duration any toggled spell may have.",
+      "valueOptions": {
+        "min": 1,
+        "max": 100,
+        "step": 1,
+        "formatString": "{2}",
+        "sourceType": "ModSettingInt",
+        "defaultValue": 10
+      }
+    },
+    {
+      "id": "iChargeCostSolution:Charge",
+      "text": "Cheapest Cost",
+      "type": "slider",
+      "help": "A minimum cost under which all spells will immedietely charge to the maximum duration.",
+      "valueOptions": {
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "formatString": "{2}",
+        "sourceType": "ModSettingInt",
+        "defaultValue": 20
+      }
+    },
+    {
+      "id": "iChargeTimeMax:Charge",
+      "text": "Max Charge Time",
+      "type": "slider",
+      "help": "A maximum time any spell should have to charge, in seconds.",
+      "valueOptions": {
+        "min": 0,
+        "max": 20,
+        "step": 1,
+        "formatString": "{2}",
+        "sourceType": "ModSettingInt",
+        "defaultValue": 10
+      }
+    },
+    {
+      "id": "iChargeCostMax:Charge",
+      "text": "Most Expensive Cost",
+      "type": "slider",
+      "help": "A maximum cost beyond which all spells will require the maximum time to charge.",
+      "valueOptions": {
+        "min": 0,
+        "max": 1000,
+        "step": 1,
+        "formatString": "{2}",
+        "sourceType": "ModSettingInt",
+        "defaultValue": 100
+      }
+    },
+		{
+			"text": "Optional",
+			"type": "header"
+		},
+		{
+			"id": "bSustainedMagicMode:Optional",
+			"text": "Sustained Magic Mode",
+			"type": "toggle",
+			"help": "Make every toggle spell cost 0 to cast",
+			"valueOptions": {
+				"sourceType": "ModSettingBool",
+				"defaultValue": 0
+			}
+		},
+        {
+          "position": 1,
+          "text": "Debugging",
+          "type": "header"
+        },
+        {
+          "text": "Refresh Debuffs",
+          "type": "toggle",
+          "action": {
+            "type": "CallFunction",
+            "function": "RefreshDebuffs"
+          }
+        },
+        {
+          "text": "Emergency Dispel",
+          "type": "toggle",
+          "help": "Emergency dispel all spells.",
+          "action": {
+            "type": "CallFunction",
+            "function": "EmergencyDispel"
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Spell List",
+      "cursorFillMode": "topToBottom",
+      "content": [
+        {
+          "position": 0,
+          "text": "Search for a spell...",
+          "type": "input",
+          "valueOptions": {
+            "propertyName": "pWhitelistUserInput"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "text": "Remove Spells from Lorica",
+          "type": "header"
+        },
+        {
+          "id": "iSelectedSpellWhitelist",
+          "text": "Whitelist",
+          "type": "enum",
+          "help": "Remove Spells from Lorica's Whitelist",
+          "valueOptions": {
+            "options": [],
+            "sourceType": "PropertyValueInt",
+            "propertyName": "pSelectedSpellWhitelist"
+          }
+        },
+        {
+          "position": 1,
+          "id": "bSearchButton:Upkeep",
+          "text": "Click to Search",
+          "type": "toggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool",
+            "defaultValue": 0
+          }
+        },
+        {
+          "id": "bSearchClear:Upkeep",
+          "text": "Click to Clear Search",
+          "type": "toggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool",
+            "defaultValue": 0
+          }
+        },
+        {
+          "text": "Add spells back to Lorica",
+          "type": "header"
+        },
+        {
+          "id": "iSelectedSpellBlacklist",
+          "text": "BlackList",
+          "type": "enum",
+          "help": "Add spells from the BlackList back to Lorica",
+          "valueOptions": {
+            "options": [],
+            "sourceType": "PropertyValueInt",
+            "propertyName": "pSelectedSpellBlacklist"
+          }
+        },
+        {
+          "text": "Reset BlackList",
+          "type": "text",
+          "action": {
+            "type": "CallFunction",
+            "function": "ResetBlackList"
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Utility List",
+      "cursorFillMode": "topToBottom",
+      "content": [
+        {
+          "position": 0,
+          "text": "Search for a spell...",
+          "type": "input",
+          "valueOptions": {
+            "propertyName": "pWhitelistUserInput"
+          }
+        },
+        {
+          "type": "empty"
+        },
+        {
+          "text": "Utility List (spells that will not be dispelled by Dispel All)",
+          "type": "header"
+        },
+        {
+          "id": "iSelectedUtilityWhitelist",
+          "text": "Remove spells from the utility list",
+          "type": "enum",
+          "help": "Add spells to Utility List.",
+          "valueOptions": {
+            "options": [],
+            "sourceType": "PropertyValueInt",
+            "propertyName": "pSelectedUtilityWhitelist"
+          }
+        },
+        {
+          "position": 1,
+          "id": "bSearchButton:Upkeep",
+          "text": "Click to Search",
+          "type": "toggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool",
+            "defaultValue": 0
+          }
+        },
+        {
+          "id": "bSearchClear:Upkeep",
+          "text": "Click to Clear Search",
+          "type": "toggle",
+          "valueOptions": {
+            "sourceType": "ModSettingBool",
+            "defaultValue": 0
+          }
+        },
+        {
+          "text": "Return spells to normal dispelling behavior",
+          "type": "header"
+        },
+        {
+          "id": "iSelectedUtilityBlacklist",
+          "text": "Add spells to the utility list",
+          "type": "enum",
+          "help": "Remove spells from Utility List.",
+          "valueOptions": {
+            "options": [],
+            "sourceType": "PropertyValueInt",
+            "propertyName": "pSelectedUtilityBlacklist"
+          }
+        }
+      ]
+    }
+	]
+}

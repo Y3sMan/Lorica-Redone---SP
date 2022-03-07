@@ -1,0 +1,1 @@
+Scriptname YM_Blank extends ActiveMagicEffect
