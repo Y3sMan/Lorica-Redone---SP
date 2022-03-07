@@ -24,14 +24,14 @@ export let mainCompat = () => {
 				if ( !FormListHas(juKeys.path, suKeys.formBlackList, formSpell) ) {
 					if ( isRightSpellType(formSpell!) ) {
 						FormListAdd(juKeys.path, suKeys.formUpkeepList, formSpell, false);
-						// formlistUpkeep?.addForm(formSpell);
+						formlistUpkeep?.addForm(formSpell);
 					};
 				};
 			};
 			
 			Save(juKeys.path)
 			
-			SetCosts("all");
+			UpdateAllSpells()
 			
 			// printConsole(FormListCount(juKeys.path, suKeys.formUpkeepList))
 			SetIntValue(null, suKeys.bCompatInitialized, 1)
@@ -47,7 +47,7 @@ function ClearFromLorica(){
 	const isInBlacklist = function (spell: Form ) { if ( FormListHas(juKeys.path, suKeys.formBlackList, spell) ) { return true }}
 	for ( let i = 0; i < allspells.length; i++ ) {
 		let f = allspells[i]
-		if ( isInBlacklist(f) ) { FormListRemove(juKeys.path, suKeys.formUpkeepList, f, true) };
+		if ( isInBlacklist(f) ) { FormListRemove(juKeys.path, suKeys.formUpkeepList, f, true); RemoveDescription(f); };
 	}
 }
 
@@ -145,23 +145,33 @@ function AddDescription(spell: Form, iMag: number) {
 	
 	// longest a spell/mgef can last in skyrim; a whole day I believe, in seconds
 	const longtime = 84600;
-	const empty = [""]
 	const S = Spell.from(spell)
 
 	const Effect = S.getNthEffectMagicEffect(0);
 	const iDeliveryType = Effect.getDeliveryType();
-	const iCastType = Effect.getCastingType();
-	let Effects:PapyrusObject[]
-	Effects = S.getMagicEffects()
 
+	RemoveDescription(spell)
+	
+	
+	if ( iDeliveryType == 0 ) { AddMagicEffectToSpell(S, dummySelf, iMag, 0, longtime, 0) }; // '0' is target self
+	if ( iDeliveryType == 2 ) { AddMagicEffectToSpell(S, dummyAimed, iMag, 0, longtime, 0) }; // '2' is aimed
+	if ( iDeliveryType == 4 ) { AddMagicEffectToSpell(S, dummyTargetLocation, iMag, 0, longtime, 0) }; // '4' is target location	
+};
+
+function RemoveDescription(akSpell: Form) {
+	// dummy mgef's to hold custom description
+	const dummySelf = MagicEffect.from(Game.getFormFromFile(0x001C41, "Lorica Redone.esp"));
+	const dummyAimed = MagicEffect.from(Game.getFormFromFile(0x001E53, "Lorica Redone.esp"));
+	const dummyTargetLocation = MagicEffect.from(Game.getFormFromFile(0x001E54, "Lorica Redone.esp"));
+	
+	// longest a spell/mgef can last in skyrim; a whole day I believe, in seconds
+	const longtime = 84600;
+	const empty = [""]
+	const S = Spell.from(akSpell)
 	for ( var i = 0; i < S.getNumEffects(); i++ ) { 
 		if (  S.getNthEffectMagicEffect(i)?.getName().toLowerCase().includes('togglespell') )  { 
 		var removeEffect = S.getNthEffectMagicEffect(i); break }};
 
 	const removeMag = S.getNthEffectMagnitude(i); 
 	RemoveMagicEffectFromSpell(S, S, dummySelf, removeMag, 0, longtime, 0 );
-	
-	if ( iDeliveryType == 0 ) { AddMagicEffectToSpell(S, dummySelf, iMag, 0, longtime, 0) }; // '0' is target self
-	if ( iDeliveryType == 2 ) { AddMagicEffectToSpell(S, dummyAimed, iMag, 0, longtime, 0) }; // '2' is aimed
-	if ( iDeliveryType == 4 ) { AddMagicEffectToSpell(S, dummyTargetLocation, iMag, 0, longtime, 0) }; // '4' is target location	
-};
+}

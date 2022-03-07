@@ -1,7 +1,7 @@
-import { on, printConsole, Form, Game, Message, Actor, ObjectReference, Spell, Debug, Utility, hooks, once, FormList, Keyword, MagicEffect } from  "@skyrim-platform/skyrim-platform";
-import { FormListAdd, Save, FormListRemove, FormListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
+import { on, printConsole, Form, Game } from  "@skyrim-platform/skyrim-platform";
+import { FormListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { FormListCount, FormListGet } from   "@skyrim-platform/papyrus-util/StorageUtil";
-import { pl, juKeys, suKeys } from "./YM_Lorica_Shared";
+import { juKeys, suKeys } from "./YM_Lorica_Shared";
 import { ToggleSpell } from "./LoricaRedone";
 import { SetCosts } from "./YM_Lorica_Compat";
 

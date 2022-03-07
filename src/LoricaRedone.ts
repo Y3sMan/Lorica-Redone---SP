@@ -1,13 +1,11 @@
-import { on, printConsole, Form, Game, Message, Actor, ObjectReference, Spell, Debug, Utility, hooks, once, FormList, Keyword, MagicEffect } from  "skyrimPlatform";
+import { on, printConsole, Form, Game, Spell, Debug, Utility, hooks, once, FormList } from  "skyrimPlatform";
 import { SetIntValue, GetIntValue, FormListHas, GetFloatValue, FormListAdd, UnsetIntValue, AdjustIntValue, FormListCount, FormListRemove, FormListGet } from  "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListHas as UpkeepListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { IntToString, HasActiveSpell, GetAllSpells, GivePlayerSpellBook } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
-import { pl, juKeys, suKeys, UIUpdateDebuffMeter, FormToString } from "./YM_Lorica_Shared"
+import { pl, juKeys, suKeys, UIUpdateDebuffMeter } from "./YM_Lorica_Shared"
 import { mainCompat } from "./YM_Lorica_Compat"
 import { mainUtilitySpells } from "./YM_Lorica_UtilitySpells"
 import { mainMCM } from "./YM_Lorica_MCM"
-import { fchmod } from "fs";
-import { debug } from "util";
 
 mainMCM();
 mainUtilitySpells();
@@ -124,17 +122,22 @@ function MessageDurationResult(duration: number) {
 }
 
 const ChargeTime_V_Cost_Equation = function (spell: Form) {
-	const fCost = Spell.from(spell).getEffectiveMagickaCost(pl());
 	// equation ( charge_time is seconds spell needs to be charged to reach max spell duration )
 	// 				 {	6.4e-4 * (x+20)^2	0 <= x <= 100
 	// charge_time = |	
 	// 				 {	10					x >= 100
+	let User_Pref_Solution = GetIntValue(null, suKeys.iChargeCostSolution, 20)
+	let User_Pref_Upper_Bound = GetIntValue(null, suKeys.iChargeCostUpperBound, 10)
+	let User_Pref_Cost_Asymptote = GetIntValue(null, suKeys.iChargeCostAsymptote, 100)
+
+	const fCost = Spell.from(spell).getEffectiveMagickaCost(pl());
 	let charge_time = 0
-	let solution = 20 // solution to the first part of the step function, this 'fCost + 40**2' is of course -40. A spell costing 40 or below has to charge
-	let upper_step = 10
+	let solution = User_Pref_Solution // solution to the first part of the step function, this 'fCost + 40**2' is of course -40. A spell costing 40 or below has to charge
+	let upper_step = User_Pref_Upper_Bound
+
 	if ( fCost <= solution ) { charge_time = 0; } // first step function to bound system to constant min y i.e. less than your min cost charge_time = 0
-	if ( fCost >= 0 && fCost < 100 ) { charge_time = 6.4e-4 * ((fCost - solution)**2) } 
-	if ( fCost >= 100 ) { charge_time = upper_step;} // the max any spell should charge is 10 seconds; second step function to bound the system to some constant y
+	if ( fCost >= 0 && fCost < User_Pref_Cost_Asymptote ) { charge_time = 6.4e-4 * ((fCost - solution)**2) } 
+	if ( fCost >= User_Pref_Cost_Asymptote ) { charge_time = upper_step;} // the max any spell should charge is 10 seconds; second step function to bound the system to some constant y
 	return Math.ceil(charge_time)
 }
 
@@ -144,14 +147,15 @@ const Duration_V_ChargeTime = function (charge_timer: number, spell: Form) {
 	// duration = (9/5)*charge_time + 1		0 <= charge_time <= 5 minutes
 	// duration = 10						charge_time >= 5 minutes
 	// input charge_timer ( in seconds) should be the charge timer in the loop, NOT the calculated number from the equation ChargeTime_V_Cost_Equation
-	
+	let User_Pref_Max_Dur = GetIntValue(null, suKeys.iChargeMaxDuration, 600)
+
 	let charge_calculated = ChargeTime_V_Cost_Equation(spell)
 	charge_timer /= 60 // divide by 60 as the timer increments 60 times a second
-	if ( charge_timer >= charge_calculated ){ return 600 }
+	if ( charge_timer >= charge_calculated ){ return User_Pref_Max_Dur }
 	
 	const duration =  ((9/10)*charge_timer + 1) * 60
-	if ( duration < 600 ) { return Math.round(duration) }
-	if ( duration >= 600 ) { return 600 }
+	if ( duration < User_Pref_Max_Dur ) { return Math.round(duration) }
+	if ( duration >= User_Pref_Max_Dur ) { return User_Pref_Max_Dur }
 }
 
 function SetDuration(charge_timer: number, spell: Form) {
