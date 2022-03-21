@@ -4,7 +4,7 @@ import { pl, juKeys, suKeys, FormToString } from "./YM_Lorica_Shared"
 import { FormListAdd, FormListCount, Save, FormListGet, FormListRemove, FormListHas, FormListToArray as UpkeepArray } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { GetFloatValue, GetIntValue, SetFloatValue, SetIntValue } from "@skyrim-platform/papyrus-util/StorageUtil";
 
-
+// this is basically our default init stuff
 export let mainCompat = () => {
 	// --------------------------COMPATABILITY SECTION-------------------------------------------
 	once('update', () => {
@@ -24,11 +24,17 @@ export let mainCompat = () => {
 				if ( !FormListHas(juKeys.path, suKeys.formBlackList, formSpell) ) {
 					if ( isRightSpellType(formSpell!) ) {
 						FormListAdd(juKeys.path, suKeys.formUpkeepList, formSpell, false);
-						formlistUpkeep?.addForm(formSpell);
+						// formlistUpkeep?.addForm(formSpell);
 					};
 				};
 			};
 			
+			SetIntValue(null, suKeys.bChargingEnable, 1)
+			SetIntValue(null, suKeys.iChargeCostAsymptote, 100)
+			SetIntValue(null, suKeys.iChargeCostSolution, 20)
+			SetIntValue(null, suKeys.iChargeDurationUpperBound, 10)
+			SetIntValue(null, suKeys.iChargeMaxDuration, 10)
+
 			Save(juKeys.path)
 			
 			UpdateAllSpells()
