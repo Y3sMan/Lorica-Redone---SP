@@ -7,7 +7,6 @@ import { UpdateAllSpells } from "./YM_Lorica_Compat";
 let focused = false;
 let close = false
 
-browser.loadUrl("file:///Data/Platform/UI/lorica-menu.html"); 
 export let mainMCM = () => {
 
 	 on('menuClose', (event) => { SetIntValue(null, "YM.Lorica.MCM.MenuFlag", 0) }); 
@@ -17,6 +16,7 @@ export let mainMCM = () => {
 		};
 	})
 	once('update', () => {
+		printConsole('mcm.update')
 		const player = Game.getPlayer();
 		if (player) {
 			player.registerForModEvent(
@@ -41,30 +41,33 @@ export let mainMCM = () => {
 	hooks.sendPapyrusEvent.add(
 		{
 			enter(ctx) {
+				printConsole('modevent.onloricaOpen')
 				printConsole(`${ctx.papyrusEventName} has been caught`)
 				// SetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 1)
 				FillMCMOptions()
-		 	},
+			},
 		},
 		0x14,
 		0x14,
 		'OnLoricaOpen'
-	  );
-	hooks.sendPapyrusEvent.add(
-		{
-			enter(ctx) {
+		);
+		hooks.sendPapyrusEvent.add(
+			{
+				enter(ctx) {
+				printConsole('modevent.oninputclear')
 				printConsole(`${ctx.papyrusEventName} has been caught`)
 				// SetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 1)
 				FillMCMOptions()
-		 	},
+			},
 		},
 		0x14,
 		0x14,
 		'OnInputClear'
-	  );
-	hooks.sendPapyrusEvent.add(
-		{
-			enter(ctx) {
+		);
+		hooks.sendPapyrusEvent.add(
+			{
+				enter(ctx) {
+				printConsole('modevent.onqueuedchange')
 				printConsole(`${ctx.papyrusEventName} has been caught`)
 				once('menuClose', () => {
 					UpdateAllSpells()
@@ -79,6 +82,7 @@ export let mainMCM = () => {
 	  hooks.sendPapyrusEvent.add(
 		{
 			enter(ctx) {
+				printConsole('onupkeepinput')
 				printConsole(`${ctx.papyrusEventName} has been caught`)
 				FilterMCMOptions(GetStringValue(null, "YM.Lorica.Menu.Upkeep.Input", ''))
 		 	},

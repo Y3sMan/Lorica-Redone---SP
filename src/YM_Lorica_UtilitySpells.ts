@@ -19,12 +19,14 @@ export let mainUtilitySpells = () => {
 	let i = 0
 	let flag = false
 	on('effectStart', (event) => { 
+		printConsole('utility.effectstart')
 		const mgefDispel = Game.getFormFromFile(0x181A, "Lorica Redone.esp")?.getFormID();
 		// -----------------DISPEL--------------------------------------------------------------
 		if ( event.effect.getFormID() == mgefDispel ) { flag = true; DispelSpells('exclusive'); }
 		if ( event.effect.getFormID() == mgefDispel && i < 300 && i > 0 ) { i = 0; flag = false; DispelSpells("ALL"); };
 		// -------DISPEL TIMER-----------------------------------
 		on('update', () => {
+			printConsole('utility.effectstart.update')
 			if ( flag ) { i++; };
 			if ( i > 300 ) { i = 0; flag = false; };
 		});

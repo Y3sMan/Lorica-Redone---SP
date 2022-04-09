@@ -12,16 +12,19 @@ mainUtilitySpells();
 let bCharging = 1
 //---------------------------------COMPATIBILITY SECTION---------------------------------------------
 on('loadGame', () => { 
+	printConsole('loadgame')
 	var allspells:Spell[]
 	allspells = GetAllSpells(null, true);
 	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length ) { mainCompat(); };
 });
 on('scriptInit', (event) => { 
+	printConsole('scriptinit')
 	var allspells:Spell[]
 	allspells = GetAllSpells(null, true);
 	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length && !GetIntValue(null, suKeys.bCompatInitialized) ) { mainCompat(); };
 });
 once('update', () => {
+	printConsole('update')
 	// GivePlayerSpellBook(); // debug option
 	bCharging = GetIntValue(null, suKeys.bChargingEnable, 1)
 })
@@ -39,7 +42,9 @@ hooks.sendAnimationEvent.add({
 		let animEvent = ctx.animEventName.toLowerCase()
 		// printConsole(animEvent);
 		if (animEvent.includes("dualmagic")) { 
+			printConsole('animevent')
 			once('update', () => {
+				printConsole('animeven.update')
 				const equippedRight = Form.from(Game.getPlayer()!.getEquippedSpell(1));
 				if ( !equippedRight ) { return; };
 				const sDualCast = "LoricaRedone" + equippedRight.getName() + "DualCast";
@@ -60,6 +65,7 @@ hooks.sendAnimationEvent.add({
 		if ( bCharging == 1) {
 			if (animEvent.includes("spellready") ) { 
 				once('update', () => {
+					printConsole('animevent.update.charging')
 					bUpkeepCast = true;
 					fChargeTimerL = 0
 					fChargeTimerR = 0
@@ -69,6 +75,7 @@ hooks.sendAnimationEvent.add({
 						if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedLeft) || FormListHas(null, suKeys.formAppliedList, equippedLeft) ) { bUpkeepCast = false; ; fChargeTimerR = 0; return; }
 							on('update', () => { 
 								if ( bUpkeepCast ) { 
+									printConsole('animevent.onUpdate.charging.left')
 									const w = async () => {
 										await Utility.wait(0.5)
 										Debug.notification('Spell is charging!')
@@ -84,6 +91,7 @@ hooks.sendAnimationEvent.add({
 					if ( animEvent.includes('mrh') ) {
 						if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedRight) || FormListHas(null, suKeys.formAppliedList, equippedRight) ) { bUpkeepCast = false; fChargeTimerR = 0; return; }
 						on('update', () => { 
+							printConsole('animevent.onUpdate.charging.right')
 							if ( bUpkeepCast ) { 
 								const w = async () => {
 									await Utility.wait(0.5)
@@ -102,6 +110,7 @@ hooks.sendAnimationEvent.add({
 			if (animEvent.includes("spellrelease") || animEvent.includes('equipped_event') || animEvent.includes('unequip') ) { bUpkeepCast = false; fChargeTimerL = 0;fChargeTimerR = 0; }
 			if (animEvent.includes("spellrelease") ) { 
 				once('update', () => {
+					printConsole('animevent.onUpdate.charging.cleanup')
 					let left = Form.from(Game.getPlayer().getEquippedSpell(0)); 
 					let right = Form.from(Game.getPlayer().getEquippedSpell(1));
 					if ( animEvent.includes('mrh') ) {if (!isInWrongLists(right)) {MessageDurationResult(Spellduration)}}
@@ -171,6 +180,7 @@ function SetDuration(charge_timer: number, spell: Form) {
 }
 //---------------------------MAIN--------------------------------------------
 on('spellCast', (event) => {
+	printConsole('spellcast')
 	// const caster = Actor.from(event.caster.getBaseObject()) // event castor as Actor
 	const castspell = Form.from(event.spell) // event spell as Form
 	const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
@@ -188,6 +198,7 @@ on('spellCast', (event) => {
 });
 // ----------------------------------------CLEANUP------------------------------------------
 on('effectFinish', (event) => { 
+	printConsole('effectfinish')
 	for ( let i = 0; i < FormListCount(null, suKeys.formAppliedList); i++ ) {
 		const F = FormListGet(null, suKeys.formAppliedList, i)
 		const S = Spell.from(F)
