@@ -222,17 +222,19 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 	// get currently equipped spells to check for dual-cast
 	const equippedLeft = Form.from( Game.getPlayer()!.getEquippedSpell(0));
 	const equippedRight = Form.from(Game.getPlayer()!.getEquippedSpell(1));
-	const sDualCast = "LoricaRedone" + equippedRight!.getName() + "DualCast";
+	var sDualCast: string
+	if ( equippedRight ) { sDualCast = "LoricaRedone" + equippedRight?.getName() + "DualCast"; }
+	else if ( equippedLeft ) { sDualCast = "LoricaRedone" + equippedLeft?.getName() + "DualCast"; }
 	if (option.includes("on")){
 		FormListAdd(null, suKeys.formAppliedList, spell!, true); // add form to list of applied spells
 		// formlistApplied!.addForm(spell!);
 		try {
 			
-			if (equippedRight!.getFormID() == equippedLeft!.getFormID() && GetIntValue(null, sDualCast, 0) == 1){
+			if (equippedRight!.getFormID() == equippedLeft!.getFormID() && GetIntValue(null, sDualCast!, 0) == 1){
 				// printConsole('ToggleSpell: dualcast check => Good!');
 				fMag *= 2
 				iCum *= 2
-				SetIntValue(null, sDualCast, 1)
+				SetIntValue(null, sDualCast!, 1)
 			}
 		}
 		catch (error) {};
