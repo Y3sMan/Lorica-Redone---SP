@@ -16,7 +16,7 @@ on('loadGame', () => {
 	allspells = GetAllSpells(null, true);
 	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length ) { mainCompat(); };
 });
-on('scriptInit', (event) => { 
+once('scriptInit', () => { 
 	var allspells:Spell[]
 	allspells = GetAllSpells(null, true);
 	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length && !GetIntValue(null, suKeys.bCompatInitialized) ) { mainCompat(); };
