@@ -17,12 +17,9 @@ on('loadGame', () => {
 	allspells = GetAllSpells(null, true);
 	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length ) { mainCompat(); };
 });
-on('scriptInit', (event) => { 
-	printConsole('scriptinit')
-	var allspells:Spell[]
-	allspells = GetAllSpells(null, true);
-	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length && !GetIntValue(null, suKeys.bCompatInitialized) ) { mainCompat(); };
-});
+// once('scriptInit', (event) => { 
+// 	if ( !GetIntValue(null, suKeys.bCompatInitialized) ) { mainCompat(); };
+// });
 once('update', () => {
 	printConsole('update')
 	// GivePlayerSpellBook(); // debug option

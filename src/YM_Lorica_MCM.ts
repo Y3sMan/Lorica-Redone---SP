@@ -9,7 +9,7 @@ let close = false
 
 export let mainMCM = () => {
 
-	 on('menuClose', (event) => { SetIntValue(null, "YM.Lorica.MCM.MenuFlag", 0) }); 
+	on('menuClose', (event) => { SetIntValue(null, "YM.Lorica.MCM.MenuFlag", 0) }); 
 	on('menuOpen', () => {
 		if ( GetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 0) == 1) { 
 			once('update', () => { SetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 0) });
