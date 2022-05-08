@@ -1,14 +1,14 @@
 import { on, printConsole, Form, Game, Spell, Debug, once, FormList, Keyword, MagicEffect, PapyrusObject } from  "@skyrim-platform/skyrim-platform";
-import { AddMagicEffectToSpell, GetEffectArchetypeAsInt, GetAllSpells, RemoveMagicEffectFromSpell, GivePlayerSpellBook } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
+import { AddMagicEffectToSpell, GetEffectArchetypeAsInt, GetAllSpells, RemoveMagicEffectFromSpell, GivePlayerSpellBook, RemoveEffectItemFromSpell } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
 import { pl, juKeys, suKeys, FormToString } from "./YM_Lorica_Shared"
-import { FormListAdd, FormListCount, Save, FormListGet, FormListRemove, FormListHas, FormListToArray as UpkeepArray } from  "@skyrim-platform/papyrus-util/JsonUtil";
+import { FormListAdd, FormListCount, Save, FormListGet, FormListRemove, FormListHas, FormListToArray as UpkeepArray, IntListAdd, IntListToArray } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { GetFloatValue, GetIntValue, SetFloatValue, SetIntValue } from "@skyrim-platform/papyrus-util/StorageUtil";
 
 // this is basically our default init stuff
 export let mainCompat = () => {
 	// --------------------------COMPATABILITY SECTION-------------------------------------------
 	once('update', () => {
-		if ( GetIntValue(null, suKeys.bCompatInitialized, 0) == 0 ) {
+		// if ( GetIntValue(null, suKeys.bCompatInitialized, 0) == 0 ) {
 			const formlistUpkeep = FormList.from(Game.getFormFromFile(0x1D62, "Lorica Redone.esp"))
 			Game.setGameSettingFloat("fMagicLesserPowerCooldownTimer", 0.01); // make lesser powers spammable, to enable spamming the dispel power
 			// if ( !formlistUpkeep ) { return; };
@@ -23,6 +23,7 @@ export let mainCompat = () => {
 				
 				if ( !FormListHas(juKeys.path, suKeys.formBlackList, formSpell) ) {
 					if ( isRightSpellType(formSpell!) ) {
+						IntListAdd(juKeys.path, suKeys.formUpkeepList, formSpell?.getFormID(), false)
 						FormListAdd(juKeys.path, suKeys.formUpkeepList, formSpell, false);
 						// formlistUpkeep?.addForm(formSpell);
 					};
@@ -38,17 +39,18 @@ export let mainCompat = () => {
 			Save(juKeys.path)
 			
 			UpdateAllSpells()
+			// CleanUp()
 			
 			// printConsole(FormListCount(juKeys.path, suKeys.formUpkeepList))
 			SetIntValue(null, suKeys.bCompatInitialized, 1)
 			printConsole("Lorica Redone started");
-		};
+		// };
 	}); 
 }
 
-export function UpdateAllSpells() { SetCosts('all'); ClearFromLorica() }
+export function UpdateAllSpells() { SetCosts('all'); CleanUp() }
 
-function ClearFromLorica(){
+function CleanUp(){
 	let allspells = UpkeepArray(juKeys.path, suKeys.formUpkeepList)
 	const isInBlacklist = function (spell: Form ) { if ( FormListHas(juKeys.path, suKeys.formBlackList, spell) ) { return true }}
 	for ( let i = 0; i < allspells.length; i++ ) {
@@ -81,10 +83,12 @@ const isRightSpellType = (akForm: Form): boolean => {
 	const Effect = Spell.from(akForm)!.getNthEffectMagicEffect(0);
 	const iDeliveryType = Effect!.getDeliveryType();
 	const iCastType = Effect!.getCastingType();
+	const name: string = Effect!.getName()
 	 
 /* only include spells that target 'self' and are 'fire and forget'; if they are 'fire and forget' and 'aimed,' only include 'conjuration' spells
 	=> FF and Self Spells;	FF and Aimed spells and Renaimate spells; FF and Target Location and Summon spells			
 */
+	if ( name.toLowerCase().includes('npc')) {return;}
 	if ( 
 		   iCastType == 1 && iDeliveryType == 0 && Duration(akForm) > 1
 		|| iCastType == 1 && iDeliveryType == 2 && Archetype(akForm) == 22 
@@ -114,11 +118,11 @@ export function SetCosts(option: string, akspell?: Form) {
 		
 		iMag = Math.floor(iMag)
 		if ( iMag < fMin ) { iMag = fMin; }
-		
+		RemoveDescription(spell)
 		SetFloatValue(null, sSpell, iMag);
 		AddDescription(spell, iMag);
 	};
-	// const ClearFromLorica = function ( spell: Form ) {  }
+	// const CleanUp = function ( spell: Form ) {  }
 	// if ( isInBlacklist(akspell!) ) { }
 	if ( option.toLowerCase().includes("all") ) {
 		Debug.notification("Adding or reapplying debuffs to spells");
@@ -164,20 +168,13 @@ function AddDescription(spell: Form, iMag: number) {
 	if ( iDeliveryType == 4 ) { AddMagicEffectToSpell(S, dummyTargetLocation, iMag, 0, longtime, 0) }; // '4' is target location	
 };
 
-function RemoveDescription(akSpell: Form) {
-	// dummy mgef's to hold custom description
-	const dummySelf = MagicEffect.from(Game.getFormFromFile(0x001C41, "Lorica Redone.esp"));
-	const dummyAimed = MagicEffect.from(Game.getFormFromFile(0x001E53, "Lorica Redone.esp"));
-	const dummyTargetLocation = MagicEffect.from(Game.getFormFromFile(0x001E54, "Lorica Redone.esp"));
-	
-	// longest a spell/mgef can last in skyrim; a whole day I believe, in seconds
-	const longtime = 84600;
-	const empty = [""]
+function RemoveDescription(akSpell: Form | Spell) {
 	const S = Spell.from(akSpell)
+	// if ( !S ) { return;}
 	for ( var i = 0; i < S.getNumEffects(); i++ ) { 
-		if (  S.getNthEffectMagicEffect(i)?.getName().toLowerCase().includes('togglespell') )  { 
-		var removeEffect = S.getNthEffectMagicEffect(i); break }};
-
-	const removeMag = S.getNthEffectMagnitude(i); 
-	RemoveMagicEffectFromSpell(S, S, dummySelf, removeMag, 0, longtime, 0 );
+		if (  S.getNthEffectMagicEffect(i)?.getName().toLowerCase().includes('sustain spell') )  { 
+			// RemoveMagicEffectFromSpell(S, removeeffect, removeMag, 0, removeDur  );
+			RemoveEffectItemFromSpell(S, S, i)
+			// printConsole(`${S?.getName()} was removed`)
+		}};
 }

@@ -1,6 +1,6 @@
 import { on, printConsole, Form, Game } from  "@skyrim-platform/skyrim-platform";
 import { FormListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
-import { FormListCount, FormListGet } from   "@skyrim-platform/papyrus-util/StorageUtil";
+import { FormListCount, FormListGet, FormListToArray } from   "@skyrim-platform/papyrus-util/StorageUtil";
 import { juKeys, suKeys } from "./YM_Lorica_Shared";
 import { ToggleSpell } from "./LoricaRedone";
 import { SetCosts } from "./YM_Lorica_Compat";
@@ -8,8 +8,10 @@ import { SetCosts } from "./YM_Lorica_Compat";
 
 
 export function DispelSpells(option: string = '') {
-	for ( let i = 0; i < FormListCount(null, suKeys.formAppliedList); i++ ) { 
-		const F = FormListGet(null, suKeys.formAppliedList, i);
+	let l = FormListCount(null, suKeys.formAppliedList)
+	let a = FormListToArray(null, suKeys.formAppliedList)
+	for ( let i = 0; i < l; i++ ) { 
+		const F = a[i]
 		if ( FormListHas(juKeys.path, suKeys.formExclusionList, F) && option.toLowerCase() == 'exclusive') { continue;}
 		ToggleSpell("off", F)
 	}

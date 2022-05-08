@@ -1,4 +1,4 @@
-import { on, printConsole, Form, Game, Message, Actor, ObjectReference, Spell, Debug, Utility, Ui, writeLogs } from  "skyrimPlatform";
+import { on, printConsole, Form, Game, Message, Actor, ObjectReference, Spell, Debug, Utility, Ui, writeLogs } from  "@skyrim-platform/skyrim-platform";
 import { AddMagicEffectToSpell, GetActorValueModifier, IntToString } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
 
 

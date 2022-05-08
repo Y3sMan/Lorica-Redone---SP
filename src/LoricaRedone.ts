@@ -1,4 +1,4 @@
-import { on, printConsole, Form, Game, Spell, Debug, Utility, hooks, once, FormList, browser } from  "skyrimPlatform";
+import { on, printConsole, Form, Game, Spell, Debug, Utility, hooks, once, FormList, browser, createText, setTextString, getNumCreatedTexts, setTextColor, getTextColor, destroyText } from  "@skyrim-platform/skyrim-platform";
 import { SetIntValue, GetIntValue, FormListHas, GetFloatValue, FormListAdd, UnsetIntValue, AdjustIntValue, FormListCount, FormListRemove, FormListGet } from  "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListHas as UpkeepListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { IntToString, HasActiveSpell, GetAllSpells, GivePlayerSpellBook } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
@@ -6,23 +6,33 @@ import { pl, juKeys, suKeys, UIUpdateDebuffMeter } from "./YM_Lorica_Shared"
 import { mainCompat } from "./YM_Lorica_Compat"
 import { mainUtilitySpells } from "./YM_Lorica_UtilitySpells"
 import { mainMCM } from "./YM_Lorica_MCM"
+import { waitForDebugger } from "inspector";
+import { debug } from "console";
 
 mainMCM();
 mainUtilitySpells();
 let bCharging = 1
 //---------------------------------COMPATIBILITY SECTION---------------------------------------------
-on('loadGame', () => { 
-	var allspells:Spell[]
-	allspells = GetAllSpells(null, true);
-	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length ) { mainCompat(); };
-});
-once('scriptInit', () => { 
+const spellCompatCheck = function () {
 	var allspells:Spell[]
 	allspells = GetAllSpells(null, true);
 	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length && !GetIntValue(null, suKeys.bCompatInitialized) ) { mainCompat(); };
+}
+
+on('loadGame', () => { printConsole('loadgame') ;spellCompatCheck() });
+on('newGame', () => { printConsole('newgame') ;spellCompatCheck() });
+once('skyrimLoaded', () => { 
+	// printConsole('skyrimLoaded') 
+	// let charge_indicator:number = createText(100, 100, 'test', [0,0.5,1,1])
+	// SetIntValue(null, '.LoricaRedone.widgets.charging.id', charge_indicator)
+
 });
+once('scriptInit', () => { spellCompatCheck() });
 once('update', () => {
+	// if ( !GetIntValue(null, suKeys.bCompatInitialized) ) { return;}
 	// GivePlayerSpellBook(); // debug option
+	mainCompat()
+	// spellCompatCheck()
 	let lcharge_indicator:number = createText(1000, 1000, 'test', [0,0.5,1,1])
 	let rcharge_indicator:number = createText(1300, 1000, 'test', [0,0.5,1,1])
 	SetIntValue(null, '.LoricaRedone.widgets.charging.left.id', lcharge_indicator)
@@ -79,10 +89,6 @@ hooks.sendAnimationEvent.add({
 					if ( animEvent.includes('mlh') ) { 
 						if ( isInWrongLists(equippedLeft) ) { bUpkeepCast = false; ; fChargeTimerL = 0; return; }
 						on('update', () => { 
-							on('update', () => { 
-						on('update', () => { 
-							if ( bUpkeepCast ) { 
-								if ( bUpkeepCast ) { 
 							if ( bUpkeepCast ) { 
 								const w = async (duration: number) => {
 									await Utility.wait(0.5)
@@ -270,7 +276,7 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 	else if ( equippedLeft ) { sDualCast = "LoricaRedone" + equippedLeft?.getName() + "DualCast"; }
 	if (option.includes("on")){
 		FormListAdd(null, suKeys.formAppliedList, spell!, true); // add form to list of applied spells
-		// formlistApplied!.addForm(spell!);
+		formlistApplied!.addForm(spell!);
 		try {
 			
 			if (equippedRight!.getFormID() == equippedLeft!.getFormID() && GetIntValue(null, sDualCast!, 0) == 1){
