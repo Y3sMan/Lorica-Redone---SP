@@ -23,6 +23,10 @@ once('scriptInit', () => {
 });
 once('update', () => {
 	// GivePlayerSpellBook(); // debug option
+	let lcharge_indicator:number = createText(1000, 1000, 'test', [0,0.5,1,1])
+	let rcharge_indicator:number = createText(1300, 1000, 'test', [0,0.5,1,1])
+	SetIntValue(null, '.LoricaRedone.widgets.charging.left.id', lcharge_indicator)
+	SetIntValue(null, '.LoricaRedone.widgets.charging.right.id', rcharge_indicator)
 	bCharging = GetIntValue(null, suKeys.bChargingEnable, 1)
 })
 // --------------------------------DUAL CAST CHECK----------------------------
@@ -57,6 +61,13 @@ hooks.sendAnimationEvent.add({
 				return true;
 			}
 		}
+		const WidgetSet = function (duration: number, hand: string) {
+			hand = hand.toLowerCase()
+			let widget = GetIntValue(null, `.LoricaRedone.widgets.charging.${hand}.id`)
+			let max = GetIntValue(null, suKeys.iChargeMaxDuration, 600) * 60 / 100
+			setTextColor(widget, [0,0.5,1,1])
+			setTextString(widget, `${Math.round(duration / max)}%`)
+		}
 		if ( bCharging == 1) {
 			if (animEvent.includes("spellready") ) { 
 				once('update', () => {
@@ -66,46 +77,69 @@ hooks.sendAnimationEvent.add({
 					const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
 					const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
 					if ( animEvent.includes('mlh') ) { 
-						if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedLeft) || FormListHas(null, suKeys.formAppliedList, equippedLeft) ) { bUpkeepCast = false; ; fChargeTimerR = 0; return; }
+						if ( isInWrongLists(equippedLeft) ) { bUpkeepCast = false; ; fChargeTimerL = 0; return; }
+						on('update', () => { 
 							on('update', () => { 
-								if ( bUpkeepCast ) { 
-									const w = async () => {
-										await Utility.wait(0.5)
-										Debug.notification('Spell is charging!')
-										fChargeTimerL++
-									}
-									w()
-									const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
-									Spellduration = SetDuration( fChargeTimerL, equippedLeft);
-									if ( (fChargeTimerL / 60) > 300 ) {bUpkeepCast = false; fChargeTimerL = 0; }
-								}
-							})
-					}
-					if ( animEvent.includes('mrh') ) {
-						if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, equippedRight) || FormListHas(null, suKeys.formAppliedList, equippedRight) ) { bUpkeepCast = false; fChargeTimerR = 0; return; }
 						on('update', () => { 
 							if ( bUpkeepCast ) { 
-								const w = async () => {
+								if ( bUpkeepCast ) { 
+							if ( bUpkeepCast ) { 
+								const w = async (duration: number) => {
 									await Utility.wait(0.5)
-									Debug.notification('Spell is charging!')
+									// Debug.notification('Spell is charging!')
+									WidgetSet(duration, 'left')
+									fChargeTimerL++
+								}
+								const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
+								Spellduration = SetDuration( fChargeTimerL, equippedLeft);
+								w(Spellduration)
+								if ( (fChargeTimerL / 60) > 300 ) {bUpkeepCast = false; fChargeTimerL = 0; }
+							}
+						})
+					}
+					if ( animEvent.includes('mrh') ) {
+						if ( isInWrongLists(equippedRight) ) { bUpkeepCast = false; fChargeTimerR = 0; return; }
+						on('update', () => { 
+							if ( bUpkeepCast ) { 
+								const w = async (duration: number) => {
+									await Utility.wait(0.5)
+									// Debug.notification('Spell is charging!')
+									WidgetSet(Spellduration, 'right')
 									fChargeTimerR++
 								}
-								w()
 								const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
 								Spellduration = SetDuration( fChargeTimerR, equippedRight);
+								w(Spellduration)
 								if ( (fChargeTimerR / 60) > 300 ) {bUpkeepCast = false; fChargeTimerR = 0; }
 							}	
 						})
 					}
 				})
 			}
-			if (animEvent.includes("spellrelease") || animEvent.includes('equipped_event') || animEvent.includes('unequip') ) { bUpkeepCast = false; fChargeTimerL = 0;fChargeTimerR = 0; }
+			if (animEvent.includes("spellrelease") || animEvent.includes('equipped_event') || animEvent.includes('unequip') ) { 
+				bUpkeepCast = false; fChargeTimerL = 0;fChargeTimerR = 0; 
+				once('update', () =>{
+					const w = async () => {
+						await Utility.wait(2.0)
+						printConsole('fadeout started')
+						let lwidget = GetIntValue(null, '.LoricaRedone.widgets.charging.left.id')
+						let rwidget = GetIntValue(null, '.LoricaRedone.widgets.charging.right.id')
+						let color: number[] = getTextColor(rwidget)
+						color[3] = 0
+						setTextColor(lwidget, color)
+						setTextColor(rwidget, color)
+					}
+					w()
+				});
+			}
 			if (animEvent.includes("spellrelease") ) { 
 				once('update', () => {
 					let left = Form.from(Game.getPlayer().getEquippedSpell(0)); 
 					let right = Form.from(Game.getPlayer().getEquippedSpell(1));
-					if ( animEvent.includes('mrh') ) {if (!isInWrongLists(right)) {MessageDurationResult(Spellduration)}}
-					if ( animEvent.includes('mlh') ) {if ( !isInWrongLists(left)) {MessageDurationResult(Spellduration)}} 
+					if ( animEvent.includes('mrh') && !isInWrongLists(right) ) {
+						
+					}
+					// if ( animEvent.includes('mlh') && !isInWrongLists(left)) {MessageDurationResult(Spellduration)}
 				})
 			}
 		}
@@ -117,11 +151,20 @@ function MessageDurationResult(duration: number) {
 	duration /= 60
 	duration = Math.floor(duration)
 	// if ( duration > 0 && duration < 7 ) { }
-	const w =async () => {
-		await Utility.wait(0.2)
-		Debug.notification(`Spell has been charged enough to last ${duration} minutes!`) 
+	// const w =async () => {
+	// 	await Utility.wait(0.2)
+	// 	Debug.notification(`Spell has been charged enough to last ${duration} minutes!`) 
+	// }
+	// w()
+	let widget = GetIntValue(null, '.LoricaRedone.widgets.charging.id')
+	if ( widget == 0 ) { 
+		Debug.notification("Widget Failed!\nERROR 403: no widget created\nAttempting to recreate widget") ;
+		once('update', () => {
+			let charge_indicator:number = createText(100, 100, 'test', [0,0.5,1,1])
+			SetIntValue(null, '.LoricaRedone.widgets.charging.id', charge_indicator)
+		});
 	}
-	w()
+	setTextString(widget, `0`)
 }
 
 const ChargeTime_V_Cost_Equation = function (spell: Form) {
