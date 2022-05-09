@@ -1,4 +1,4 @@
-import { on, printConsole, Form, Game, Spell, Debug, Utility, hooks, once, FormList, browser, createText, setTextString, getNumCreatedTexts, setTextColor, getTextColor, destroyText } from  "@skyrim-platform/skyrim-platform";
+import { on, printConsole, Form, Game, Spell, Debug, Utility, hooks, once, FormList, browser, createText, setTextString, getNumCreatedTexts, setTextColor, getTextColor, destroyText, destroyAllTexts } from  "skyrimPlatform"
 import { SetIntValue, GetIntValue, FormListHas, GetFloatValue, FormListAdd, UnsetIntValue, AdjustIntValue, FormListCount, FormListRemove, FormListGet } from  "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListHas as UpkeepListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { IntToString, HasActiveSpell, GetAllSpells, GivePlayerSpellBook } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
@@ -8,13 +8,16 @@ import { mainUtilitySpells } from "./YM_Lorica_UtilitySpells"
 import { mainMCM } from "./YM_Lorica_MCM"
 import { waitForDebugger } from "inspector";
 import { debug } from "console";
+import { text } from "stream/consumers";
 
 mainMCM();
 mainUtilitySpells();
 let bCharging = 1
+browser.setVisible(true)
+destroyAllTexts()
 //---------------------------------COMPATIBILITY SECTION---------------------------------------------
 const spellCompatCheck = function () {
-	var allspells:Spell[]
+	var allspells: Spell[]
 	allspells = GetAllSpells(null, true);
 	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length && !GetIntValue(null, suKeys.bCompatInitialized) ) { mainCompat(); };
 }
@@ -175,9 +178,9 @@ function MessageDurationResult(duration: number) {
 
 const ChargeTime_V_Cost_Equation = function (spell: Form) {
 	// equation ( charge_time is seconds spell needs to be charged to reach max spell duration )
-	// 				 {	6.4e-4 * (x+20)^2	0 <= x <= 100
+	// 				 {	6.4e-4 * (x - iChargeCostSolution)^2		0 <= x <= iChargeCostAsymptote
 	// charge_time = |	
-	// 				 {	10					x >= 100
+	// 				 {	iChargeDurationUpperBound				x >= iChargeCostAsymptote
 	let User_Pref_Solution = GetIntValue(null, suKeys.iChargeCostSolution, 20)
 	let User_Pref_Upper_Bound = GetIntValue(null, suKeys.iChargeDurationUpperBound, 10)
 	let User_Pref_Cost_Asymptote = GetIntValue(null, suKeys.iChargeCostAsymptote, 100)

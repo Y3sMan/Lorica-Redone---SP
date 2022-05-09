@@ -1,4 +1,4 @@
-import { on, printConsole, Form, Game, Spell, Debug, once, FormList, Keyword, MagicEffect, PapyrusObject } from  "@skyrim-platform/skyrim-platform";
+import { on, printConsole, Form, Game, Spell, Debug, once, FormList, Keyword, MagicEffect, PapyrusObject } from  "skyrimPlatform";
 import { AddMagicEffectToSpell, GetEffectArchetypeAsInt, GetAllSpells, RemoveMagicEffectFromSpell, GivePlayerSpellBook, RemoveEffectItemFromSpell } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
 import { pl, juKeys, suKeys, FormToString } from "./YM_Lorica_Shared"
 import { FormListAdd, FormListCount, Save, FormListGet, FormListRemove, FormListHas, FormListToArray as UpkeepArray, IntListAdd, IntListToArray } from  "@skyrim-platform/papyrus-util/JsonUtil";

@@ -1,4 +1,4 @@
-import { on, printConsole, Form, Game } from  "@skyrim-platform/skyrim-platform";
+import { on, printConsole, Form, Game } from  "skyrimPlatform";
 import { FormListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { FormListCount, FormListGet, FormListToArray } from   "@skyrim-platform/papyrus-util/StorageUtil";
 import { juKeys, suKeys } from "./YM_Lorica_Shared";
