@@ -194,8 +194,8 @@ function MessageDurationResult(duration: number) {
 }
 
 const ChargeTime_V_Cost_Equation = function (spell: Form) {
-	// equation ( charge_time is seconds spell needs to be charged to reach max spell duration )
-	// 				 {	6.4e-4 * (x - iChargeCostSolution)^2		0 <= x <= iChargeCostAsymptote
+	// equation ( charge_time is seconds spell needs to be charged to reach max spell duration in minutes )
+	// 				 {	(1/9)*iChargeCostSolution - ichargeCostSolution		0 <= x <= iChargeCostAsymptote
 	// charge_time = |	
 	// 				 {	iChargeDurationUpperBound				x >= iChargeCostAsymptote
 	let User_Pref_Solution = GetIntValue(null, suKeys.iChargeCostSolution, 20)
@@ -206,8 +206,10 @@ const ChargeTime_V_Cost_Equation = function (spell: Form) {
 	let charge_time = 0
 	let solution = User_Pref_Solution // solution to the first part of the step function, this 'fCost + 40**2' is of course -40. A spell costing 40 or below has to charge
 	let upper_step = User_Pref_Upper_Bound
+	let slope = ( User_Pref_Upper_Bound ) / ( User_Pref_Cost_Asymptote - solution)
+	printConsole(`the slope is ${slope}`)
 
-	if ( fCost >= 0 && fCost < User_Pref_Cost_Asymptote ) { charge_time = 6.4e-4 * ((fCost - solution)**2) } 
+	if ( fCost >= 0 && fCost < User_Pref_Cost_Asymptote ) { charge_time = slope * fCost - solution } 
 	if ( fCost <= solution || upper_step == 0 ) { charge_time = 0; return charge_time } // first step function to bound system to constant min y i.e. less than your min cost charge_time = 0
 	if ( fCost >= User_Pref_Cost_Asymptote ) { charge_time = upper_step;} // the max any spell should charge is 10 seconds; second step function to bound the system to some constant y
 	return Math.ceil(charge_time)
