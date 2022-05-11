@@ -41,7 +41,7 @@ export let mainMCM = () => {
 	hooks.sendPapyrusEvent.add(
 		{
 			enter(ctx) {
-				printConsole(`${ctx.papyrusEventName} has been caught`)
+				// printConsole(`${ctx.papyrusEventName} has been caught`)
 				// SetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 1)
 				FillMCMOptions()
 		 	},
@@ -53,7 +53,7 @@ export let mainMCM = () => {
 	hooks.sendPapyrusEvent.add(
 		{
 			enter(ctx) {
-				printConsole(`${ctx.papyrusEventName} has been caught`)
+				// printConsole(`${ctx.papyrusEventName} has been caught`)
 				// SetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 1)
 				FillMCMOptions()
 		 	},
@@ -65,7 +65,7 @@ export let mainMCM = () => {
 	hooks.sendPapyrusEvent.add(
 		{
 			enter(ctx) {
-				printConsole(`${ctx.papyrusEventName} has been caught`)
+				// printConsole(`${ctx.papyrusEventName} has been caught`)
 				once('menuClose', () => {
 					UpdateAllSpells()
 				})
@@ -79,7 +79,7 @@ export let mainMCM = () => {
 	  hooks.sendPapyrusEvent.add(
 		{
 			enter(ctx) {
-				printConsole(`${ctx.papyrusEventName} has been caught`)
+				// printConsole(`${ctx.papyrusEventName} has been caught`)
 				FilterMCMOptions(GetStringValue(null, "YM.Lorica.Menu.Upkeep.Input", ''))
 		 	},
 		},

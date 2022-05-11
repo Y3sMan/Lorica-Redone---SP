@@ -49,7 +49,6 @@ once('skyrimLoaded', () => {
 once('scriptInit', () => { spellCompatCheck() });
 once('update', () => {
 	// if ( !GetIntValue(null, suKeys.bCompatInitialized) ) { return;}
-	GivePlayerSpellBook(); // debug option
 	mainCompat()
 	// spellCompatCheck()
 	DestroyLoricaTexts()
@@ -105,7 +104,7 @@ hooks.sendAnimationEvent.add({
 					if ( animEvent.includes('mlh') ) { 
 						fChargeTimerL = 0
 						bUpkeepCastL = true;
-						printConsole(animEvent)
+						// printConsole(animEvent)
 						if ( isInWrongLists(equippedLeft) ) { bUpkeepCastL = false; ; fChargeTimerL = 0; return; }
 						on('update', () => { 
 							if ( bUpkeepCastL ) { 
@@ -207,7 +206,7 @@ const ChargeTime_V_Cost_Equation = function (spell: Form) {
 	let solution = User_Pref_Solution // solution to the first part of the step function, this 'fCost + 40**2' is of course -40. A spell costing 40 or below has to charge
 	let upper_step = User_Pref_Upper_Bound
 	let slope = ( User_Pref_Upper_Bound ) / ( User_Pref_Cost_Asymptote - solution)
-	printConsole(`the slope is ${slope}`)
+	// printConsole(`the slope is ${slope}`)
 
 	if ( fCost >= 0 && fCost < User_Pref_Cost_Asymptote ) { charge_time = slope * fCost - solution } 
 	if ( fCost <= solution || upper_step == 0 ) { charge_time = 0; return charge_time } // first step function to bound system to constant min y i.e. less than your min cost charge_time = 0
@@ -245,7 +244,7 @@ on('spellCast', (event) => {
 	// const caster = Actor.from(event.caster.getBaseObject()) // event castor as Actor
 	const castspell = Form.from(event.spell) // event spell as Form
 	const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
-	printConsole(formlistApplied?.hasForm(castspell))
+	// printConsole(formlistApplied?.hasForm(castspell))
 	// printConsole(`AppliedList Has => ${FormListHas(null, suKeys.formAppliedList, castspell)}`)
 	
 	if ( !castspell ) { return; };
