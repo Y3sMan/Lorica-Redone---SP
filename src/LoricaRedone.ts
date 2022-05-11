@@ -49,7 +49,7 @@ once('skyrimLoaded', () => {
 once('scriptInit', () => { spellCompatCheck() });
 once('update', () => {
 	// if ( !GetIntValue(null, suKeys.bCompatInitialized) ) { return;}
-	// GivePlayerSpellBook(); // debug option
+	GivePlayerSpellBook(); // debug option
 	mainCompat()
 	// spellCompatCheck()
 	DestroyLoricaTexts()
@@ -223,13 +223,13 @@ const Duration_V_ChargeTime = function (charge_timer: number, spell: Form) {
 	// input charge_timer ( in seconds) should be the charge timer in the loop, NOT the calculated number from the equation ChargeTime_V_Cost_Equation
 	let User_Pref_Max_Dur = GetIntValue(null, suKeys.iChargeMaxDuration, 600) * 60 // mult. by 60 to convert minutes to seconds
 	let User_Pref_Upper_Bound = GetIntValue(null, suKeys.iChargeDurationUpperBound, 10)
-	let slope = (User_Pref_Max_Dur - 60) / User_Pref_Upper_Bound
+	let slope = (User_Pref_Max_Dur - 60) / User_Pref_Upper_Bound // subtract by 60 since the lowest duration allowed is 60 seconds (one minute)
 
 	let charge_calculated = ChargeTime_V_Cost_Equation(spell)
 	charge_timer /= 60 // divide by 60 as the timer increments 60 times a second
 	if ( charge_timer >= charge_calculated ){ return User_Pref_Max_Dur }
 	
-	const duration =  ((slope)*charge_timer + 60)
+	const duration =  ((slope)*charge_timer + 60) // y-intercept of this equation is 60 seconds (one minute), the min
 	if ( duration < User_Pref_Max_Dur ) { return Math.round(duration) }
 	if ( duration >= User_Pref_Max_Dur ) { return User_Pref_Max_Dur }
 }
@@ -293,7 +293,7 @@ export function ToggleSpell(option: string, spell?: Form) { // variable name suc
 	// get currently equipped spells to check for dual-cast
 	const equippedLeft = Form.from( Game.getPlayer()!.getEquippedSpell(0));
 	const equippedRight = Form.from(Game.getPlayer()!.getEquippedSpell(1));
-	var sDualCast: string = undefined
+	var sDualCast: string = ''
 	if ( equippedRight ) { sDualCast = "LoricaRedone" + equippedRight?.getName() + "DualCast"; }
 	else if ( equippedLeft ) { sDualCast = "LoricaRedone" + equippedLeft?.getName() + "DualCast"; }
 	if (option.includes("on")){
