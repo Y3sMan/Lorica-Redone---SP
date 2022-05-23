@@ -6,27 +6,24 @@ import { pl, juKeys, suKeys, UIUpdateDebuffMeter } from "./YM_Lorica_Shared"
 import { mainCompat } from "./YM_Lorica_Compat"
 import { mainUtilitySpells } from "./YM_Lorica_UtilitySpells"
 import { mainMCM } from "./YM_Lorica_MCM"
+import * as wt from "spTextUtils"
+import { eventNames } from "process";
 
 mainMCM();
 mainUtilitySpells();
 let bCharging = 1
 browser.setVisible(true)
+let modname = "LoricaRedone"
 // -------------------------------TEXTS--------------------------------------------------------------
-const CreateText = function (text: string, xpos: number, ypos: number) {
-	let text_id: number = createText(xpos, ypos, text, [0,0.5,1,1])
-	// Create text with identifying hand
-	SetIntValue(null, '.LoricaRedone.widgets.charging.' + text + '.id', text_id)
-	IntListAdd(null, '.skyrimPlatform.texts.',  text_id)
-}
+// const CreateText = function (text: string, xpos: number, ypos: number) {
+// 	let text_id: number = createText(xpos, ypos, text, [0,0.5,1,1])
+// 	// Create text with identifying hand
+// 	SetIntValue(null, '.LoricaRedone.widgets.charging.' + text + '.id', text_id)
+// 	IntListAdd(null, '.skyrimPlatform.texts.',  text_id)
+// }
 // Ensures no duplicate widgets get created
 const DestroyLoricaTexts = function () {
-	let c = getNumCreatedTexts()
-	if ( IntListCount(null, '.skyrimPlatform.texts.') == 0 || getNumCreatedTexts() == 0) { return;}
-	let alltexts = IntListToArray(null, '.skyrimPlatform.texts.')
-	alltexts.forEach(id => {
-		destroyText(id)	
-	});
-	IntListClear(null, '.skyrimPlatform.texts.')
+	wt.spText.destroyAllModTexts(modname)
 }
 //---------------------------------COMPATIBILITY SECTION---------------------------------------------
 const spellCompatCheck = function () {
@@ -255,11 +252,25 @@ on('spellCast', (event) => {
 	
 });
 // ----------------------------------------CLEANUP------------------------------------------
-on('effectFinish', (event) => { 
-	for ( let i = 0; i < FormListCount(null, suKeys.formAppliedList); i++ ) {
+const isInWrongLists = function (spell: Form) {
+	if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, spell) || FormListHas(null, suKeys.formAppliedList, spell) ) {
+		return true;
+	}
+}
+on('effectFinish', (event) => {
+	if (event.caster.getBaseObject() != pl()?.getBaseObject()) {
+		return;
+	}
+	if (!UpkeepListHas(juKeys.path, suKeys.formUpkeepList, Form.from(event.effect))) {
+		return;
+	}
+	for (let i = 0; i < FormListCount(null, suKeys.formAppliedList); i++) {
 		const F = FormListGet(null, suKeys.formAppliedList, i)
 		const S = Spell.from(F)
-		if ( !HasActiveSpell(pl(), S) ) { ToggleSpell("off", F); UIUpdateDebuffMeter() };
+		if (!HasActiveSpell(pl(), S)) {
+			ToggleSpell("off", F);
+			UIUpdateDebuffMeter()
+		};
 	};
 });
 
