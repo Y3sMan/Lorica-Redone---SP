@@ -6,9 +6,6 @@ import { pl, juKeys, suKeys, UIUpdateDebuffMeter } from "./YM_Lorica_Shared"
 import { mainCompat } from "./YM_Lorica_Compat"
 import { mainUtilitySpells } from "./YM_Lorica_UtilitySpells"
 import { mainMCM } from "./YM_Lorica_MCM"
-import { waitForDebugger } from "inspector";
-import { debug } from "console";
-import { text } from "stream/consumers";
 
 mainMCM();
 mainUtilitySpells();
@@ -112,11 +109,11 @@ hooks.sendAnimationEvent.add({
 								const w = async (duration: number) => {
 									await Utility.wait(0.5)
 									// Debug.notification('Spell is charging!')
-									WidgetHandSet(duration, 'left')
 									fChargeTimerL++
 								}
 								const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
 								Spellduration = SetDuration( fChargeTimerL, equippedLeft);
+								WidgetHandSet(Spellduration, 'left')
 								w(Spellduration)
 								if ( (fChargeTimerL / 60) > 300 ) {bUpkeepCastL = false; fChargeTimerL = 0; }
 							}
@@ -131,11 +128,11 @@ hooks.sendAnimationEvent.add({
 								const w = async (duration: number) => {
 									await Utility.wait(0.5)
 									// Debug.notification('Spell is charging!')
-									WidgetHandSet(Spellduration, 'right')
 									fChargeTimerR++
 								}
 								const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
 								Spellduration = SetDuration( fChargeTimerR, equippedRight);
+								WidgetHandSet(Spellduration, 'right')
 								w(Spellduration)
 								if ( (fChargeTimerR / 60) > 300 ) {bUpkeepCastR = false; fChargeTimerR = 0; }
 							}	
