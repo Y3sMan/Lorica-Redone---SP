@@ -1,31 +1,56 @@
-import { on, printConsole, Form, Game, Spell, Debug, Utility, hooks, once, FormList, browser, createText, setTextString, getNumCreatedTexts, setTextColor, getTextColor, destroyText, destroyAllTexts } from  "skyrimPlatform"
-import { SetIntValue, GetIntValue, FormListHas, GetFloatValue, FormListAdd, UnsetIntValue, AdjustIntValue, FormListCount, FormListRemove, FormListGet, IntListAdd, StringListAdd, SetStringValue, GetStringValue, IntListToArray, IntListClear, IntListCount } from  "@skyrim-platform/papyrus-util/StorageUtil";
+import { on, printConsole, Form, Game, Spell, Utility, hooks, once, FormList, browser, destroyAllTexts} from  "skyrimPlatform"
+import { SetIntValue, GetIntValue, FormListHas, GetFloatValue, FormListAdd, UnsetIntValue, AdjustIntValue, FormListCount, FormListRemove, FormListGet } from  "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListHas as UpkeepListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
-import { IntToString, HasActiveSpell, GetAllSpells, GivePlayerSpellBook } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
+import { IntToString, HasActiveSpell, GetAllSpells } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
 import { pl, juKeys, suKeys, UIUpdateDebuffMeter } from "./YM_Lorica_Shared"
 import { mainCompat } from "./YM_Lorica_Compat"
 import { mainUtilitySpells } from "./YM_Lorica_UtilitySpells"
-import { mainMCM } from "./YM_Lorica_MCM"
-import * as wt from "spTextUtils"
-import { eventNames } from "process";
+import { mainMCM, SetPapyrusUtilOptions } from "./YM_Lorica_MCM"
+import * as wt from "./spTextUtils"
 
 mainMCM();
 mainUtilitySpells();
 let bCharging = 1
-browser.setVisible(true)
 let modname = "LoricaRedone"
 // -------------------------------TEXTS--------------------------------------------------------------
-// const CreateText = function (text: string, xpos: number, ypos: number) {
-// 	let text_id: number = createText(xpos, ypos, text, [0,0.5,1,1])
-// 	// Create text with identifying hand
-// 	SetIntValue(null, '.LoricaRedone.widgets.charging.' + text + '.id', text_id)
-// 	IntListAdd(null, '.skyrimPlatform.texts.',  text_id)
-// }
-// Ensures no duplicate widgets get created
-const DestroyLoricaTexts = function () {
+// ------Widget Variables--------------------
+browser.setVisible(true)
+// let x_widget: number = 1000
+// let y_widget: number = 1000
+const colors = {
+	'white': [1,1,1,1],
+	'blue': [0, 0.5, 1, 1]
+}
+let left_widget: wt.spText
+let right_widget: wt.spText
+// ----------functions ---------------------
+export function CreateWidgets() {
+	SetPapyrusUtilOptions()
+	let x_widget = GetIntValue(null, "YM.LORICA.CHARGE.WIDGET.X", 1000)
+	let y_widget = GetIntValue(null, "YM.LORICA.CHARGE.WIDGET.Y", 1000)
+	if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0) {return;}
+	// if (left_widget || right_widget ) {return;}
+	bCharging = 1
+	left_widget = new wt.spText(x_widget, y_widget, 'Left Charge', colors['blue'], undefined, modname)
+	right_widget = new wt.spText(x_widget * 2, y_widget, 'Right Charge', colors['blue'], undefined, modname)
+}
+export const DestroyLoricaTexts = function () {
+	bCharging = 0
 	wt.spText.destroyAllModTexts(modname)
 }
-//---------------------------------COMPATIBILITY SECTION---------------------------------------------
+export const fadeout = async () => {
+	if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0) {return;}
+	await Utility.wait(3.0);
+	left_widget.setAlpha(0)
+	right_widget.setAlpha(0)
+}
+export const fadein = async (time: number) => {
+	if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0) {return;}
+	await Utility.wait(time);
+	left_widget.setAlpha(1)
+	right_widget.setAlpha(1)
+}
+// ---------------------------------COMPATIBILITY SECTION---------------------------------------------
 const spellCompatCheck = function () {
 	var allspells: Spell[]
 	allspells = GetAllSpells(null, true);
@@ -33,7 +58,6 @@ const spellCompatCheck = function () {
 }
 
 on('loadGame', () => { printConsole('loadgame') ;spellCompatCheck() });
-on('newGame', () => { printConsole('newgame') ;spellCompatCheck() });
 once('skyrimLoaded', () => { 
 	printConsole('skyrimLoaded') 
 	// let charge_indicator:number = createText(100, 100, 'test', [0,0.5,1,1])
@@ -42,15 +66,22 @@ once('skyrimLoaded', () => {
 });
 once('scriptInit', () => { spellCompatCheck() });
 once('update', () => {
+	// x_widget = GetIntValue(null, "YM.LORICA.CHARGE.WIDGET.X", 1000)
+	// y_widget = GetIntValue(null, "YM.LORICA.CHARGE.WIDGET.Y", 1000)
 	// if ( !GetIntValue(null, suKeys.bCompatInitialized) ) { return;}
-	GivePlayerSpellBook(); // debug option
+	// GivePlayerSpellBook(); // debug option
 	mainCompat()
 	// spellCompatCheck()
+	destroyAllTexts()
+	CreateWidgets()
 	DestroyLoricaTexts()
-	CreateText('right', 2000, 1000)
-	CreateText('left', 1000, 1000)
+	CreateWidgets()
+	fadeout()
 	bCharging = GetIntValue(null, suKeys.bChargingEnable, 1)
 })
+on('menuOpen', () => {
+	fadeout()
+});
 // --------------------------------DUAL CAST CHECK----------------------------
 // hook into dual cast magic animation to doubly check if spell was dual cast [check]
 // getEquippedSpell(0) == left hand
@@ -84,108 +115,81 @@ hooks.sendAnimationEvent.add({
 				return true;
 			}
 		}
-		const WidgetHandSet = function (duration: number, hand: string) {
-			hand = hand.toLowerCase()
-			let widget = GetIntValue(null, `.LoricaRedone.widgets.charging.${hand}.id`)
+		const WidgetHandSet = function (widget: wt.spText, duration: number) {
 			let max = GetIntValue(null, suKeys.iChargeMaxDuration, 600) * 60 / 100
-			setTextColor(widget, [0,0.5,1,1])
-			setTextString(widget, `${Math.round(duration / max)}%`)
+			bCharging = GetIntValue(null, suKeys.bChargingEnable, 1)
+			if (bCharging == 0) {return;}
+			// widget.setColor([ 1,1, 1, 1 ])
+			widget.setAlpha(1)
+			widget.setText(`${Math.round(duration / max)}%`)
 		}
-		if ( bCharging == 1) {
-			if (animEvent.includes("spellready") ) { 
-				once('update', () => {
-					const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
-					const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
-					if ( animEvent.includes('mlh') ) { 
-						fChargeTimerL = 0
-						bUpkeepCastL = true;
-						printConsole(animEvent)
-						if ( isInWrongLists(equippedLeft) ) { bUpkeepCastL = false; ; fChargeTimerL = 0; return; }
-						on('update', () => { 
-							if ( bUpkeepCastL ) { 
-								const w = async (duration: number) => {
-									await Utility.wait(0.5)
-									// Debug.notification('Spell is charging!')
-									fChargeTimerL++
-								}
-								const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
-								Spellduration = SetDuration( fChargeTimerL, equippedLeft);
-								WidgetHandSet(Spellduration, 'left')
-								w(Spellduration)
-								if ( (fChargeTimerL / 60) > 300 ) {bUpkeepCastL = false; fChargeTimerL = 0; }
+		if (bCharging == 0) {return;}
+		if (animEvent.includes("spellready") ) { 
+			once('update', () => {
+				bCharging = GetIntValue(null, suKeys.bChargingEnable, 1)
+				if (bCharging == 0) {return;}
+				const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
+				const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
+				if ( animEvent.includes('mlh') ) { 
+					fChargeTimerL = 0
+					bUpkeepCastL = true;
+					if ( isInWrongLists(equippedLeft) ) { bUpkeepCastL = false; ; fChargeTimerL = 0; return; }
+					on('update', () => { 
+						if ( bUpkeepCastL ) { 
+							const w = async (duration: number) => {
+								await Utility.wait(0.5)
+								// Debug.notification('Spell is charging!')
+								fChargeTimerL++
 							}
-						})
-					}
-					if ( animEvent.includes('mrh') ) {
-						fChargeTimerR = 0
-						bUpkeepCastR = true;
-						if ( isInWrongLists(equippedRight) ) { bUpkeepCastR = false; fChargeTimerR = 0; return; }
-						on('update', () => { 
-							if ( bUpkeepCastR ) { 
-								const w = async (duration: number) => {
-									await Utility.wait(0.5)
-									// Debug.notification('Spell is charging!')
-									fChargeTimerR++
-								}
-								const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
-								Spellduration = SetDuration( fChargeTimerR, equippedRight);
-								WidgetHandSet(Spellduration, 'right')
-								w(Spellduration)
-								if ( (fChargeTimerR / 60) > 300 ) {bUpkeepCastR = false; fChargeTimerR = 0; }
-							}	
-						})
-					}
-				})
-			}
-			if (animEvent.includes("spellrelease") || animEvent.includes('equipped_event') || animEvent.includes('unequip') ) { 
-				bUpkeepCastL = false; bUpkeepCastR = false; fChargeTimerL = 0;fChargeTimerR = 0; 
-				once('update', () =>{
-					const w = async () => {
-						await Utility.wait(2.0)
-						let lwidget = GetIntValue(null, '.LoricaRedone.widgets.charging.left.id')
-						let rwidget = GetIntValue(null, '.LoricaRedone.widgets.charging.right.id')
-						let color: number[] = getTextColor(rwidget)
-						color[3] = 0
-						setTextColor(lwidget, color)
-						setTextColor(rwidget, color)
-					}
-					w()
-				});
-			}
-			// if (animEvent.includes("spellrelease") ) { 
-			// 	once('update', () => {
-			// 		let left = Form.from(Game.getPlayer().getEquippedSpell(0)); 
-			// 		let right = Form.from(Game.getPlayer().getEquippedSpell(1));
-			// 		if ( animEvent.includes('mrh') && !isInWrongLists(right) ) {
-						
-			// 		}
-			// 		// if ( animEvent.includes('mlh') && !isInWrongLists(left)) {MessageDurationResult(Spellduration)}
-			// 	})
-			// }
+							const equippedLeft = Form.from(Game.getPlayer().getEquippedSpell(0));
+							Spellduration = SetDuration( fChargeTimerL, equippedLeft);
+							WidgetHandSet(left_widget, Spellduration)
+							w(Spellduration)
+							if ( (fChargeTimerL / 60) > 300 ) {bUpkeepCastL = false; fChargeTimerL = 0; }
+						}
+					})
+				}
+				if ( animEvent.includes('mrh') ) {
+					fChargeTimerR = 0
+					bUpkeepCastR = true;
+					if ( isInWrongLists(equippedRight) ) { bUpkeepCastR = false; fChargeTimerR = 0; return; }
+					on('update', () => { 
+						if ( bUpkeepCastR ) { 
+							const w = async (duration: number) => {
+								await Utility.wait(0.5)
+								// Debug.notification('Spell is charging!')
+								fChargeTimerR++
+							}
+							const equippedRight = Form.from(Game.getPlayer().getEquippedSpell(1));
+							Spellduration = SetDuration( fChargeTimerR, equippedRight);
+							WidgetHandSet(right_widget, Spellduration)
+							w(Spellduration)
+							if ( (fChargeTimerR / 60) > 300 ) {bUpkeepCastR = false; fChargeTimerR = 0; }
+						}	
+					})
+				}
+			})
+		}
+		if (animEvent.includes("spellrelease") || animEvent.includes('equipped_event') || animEvent.includes('unequip') ) { 
+			bUpkeepCastL = false; bUpkeepCastR = false; fChargeTimerL = 0;fChargeTimerR = 0; 
+			once('update', () =>{
+				bCharging = GetIntValue(null, suKeys.bChargingEnable, 1)
+				if (bCharging == 0) {return;}
+				const w = async () => {
+					await Utility.wait(2.0)
+					// let lwidget = GetIntValue(null, '.LoricaRedone.widgets.charging.left.id')
+					// let rwidget = GetIntValue(null, '.LoricaRedone.widgets.charging.right.id')
+					let color: number[] = right_widget.getColor()
+					color[3] = 0
+					right_widget.setColor(color)
+					left_widget.setColor(color)
+				}
+				w()
+			});
 		}
 	},
 	leave(ctx) {}
 },  0x14, 0x14); // filter out non-player events
-
-function MessageDurationResult(duration: number) {
-	duration /= 60
-	duration = Math.floor(duration)
-	// if ( duration > 0 && duration < 7 ) { }
-	// const w =async () => {
-	// 	await Utility.wait(0.2)
-	// 	Debug.notification(`Spell has been charged enough to last ${duration} minutes!`) 
-	// }
-	// w()
-	let widget = GetIntValue(null, '.LoricaRedone.widgets.charging.id')
-	if ( widget == 0 ) { 
-		Debug.notification("Widget Failed!\nERROR 403: no widget created\nAttempting to recreate widget") ;
-		once('update', () => {
-			let charge_indicator:number = createText(100, 100, 'test', [0,0.5,1,1])
-			SetIntValue(null, '.LoricaRedone.widgets.charging.id', charge_indicator)
-		});
-	}
-	setTextString(widget, `0`)
-}
 
 const ChargeTime_V_Cost_Equation = function (spell: Form) {
 	// equation ( charge_time is seconds spell needs to be charged to reach max spell duration in minutes )
@@ -201,7 +205,6 @@ const ChargeTime_V_Cost_Equation = function (spell: Form) {
 	let solution = User_Pref_Solution // solution to the first part of the step function, this 'fCost + 40**2' is of course -40. A spell costing 40 or below has to charge
 	let upper_step = User_Pref_Upper_Bound
 	let slope = ( User_Pref_Upper_Bound ) / ( User_Pref_Cost_Asymptote - solution)
-	printConsole(`the slope is ${slope}`)
 
 	if ( fCost >= 0 && fCost < User_Pref_Cost_Asymptote ) { charge_time = slope * fCost - solution } 
 	if ( fCost <= solution || upper_step == 0 ) { charge_time = 0; return charge_time } // first step function to bound system to constant min y i.e. less than your min cost charge_time = 0
@@ -239,7 +242,7 @@ on('spellCast', (event) => {
 	// const caster = Actor.from(event.caster.getBaseObject()) // event castor as Actor
 	const castspell = Form.from(event.spell) // event spell as Form
 	const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
-	printConsole(formlistApplied?.hasForm(castspell))
+	// printConsole(formlistApplied?.hasForm(castspell))
 	// printConsole(`AppliedList Has => ${FormListHas(null, suKeys.formAppliedList, castspell)}`)
 	
 	if ( !castspell ) { return; };
@@ -252,21 +255,19 @@ on('spellCast', (event) => {
 	
 });
 // ----------------------------------------CLEANUP------------------------------------------
-const isInWrongLists = function (spell: Form) {
-	if ( !UpkeepListHas(juKeys.path, suKeys.formUpkeepList, spell) || FormListHas(null, suKeys.formAppliedList, spell) ) {
-		return true;
-	}
-}
 on('effectFinish', (event) => {
+	let e = 'effectFinish started:: '
+	// printConsole(e)
 	if (event.caster.getBaseObject() != pl()?.getBaseObject()) {
 		return;
 	}
-	if (!UpkeepListHas(juKeys.path, suKeys.formUpkeepList, Form.from(event.effect))) {
-		return;
-	}
+	// printConsole(e + 'passed first condition')
 	for (let i = 0; i < FormListCount(null, suKeys.formAppliedList); i++) {
 		const F = FormListGet(null, suKeys.formAppliedList, i)
 		const S = Spell.from(F)
+		const E = S?.getMagicEffects()
+		if ( !E?.includes(event.effect)) {return;}
+		// printConsole(e + 'passed second condition')
 		if (!HasActiveSpell(pl(), S)) {
 			ToggleSpell("off", F);
 			UIUpdateDebuffMeter()

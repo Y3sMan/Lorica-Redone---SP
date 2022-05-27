@@ -88,7 +88,7 @@ const isRightSpellType = (akForm: Form): boolean => {
 /* only include spells that target 'self' and are 'fire and forget'; if they are 'fire and forget' and 'aimed,' only include 'conjuration' spells
 	=> FF and Self Spells;	FF and Aimed spells and Renaimate spells; FF and Target Location and Summon spells			
 */
-	if ( name.toLowerCase().includes('npc')) {return;}
+	if ( name.toLowerCase().includes('npc')) {return false;}
 	if ( 
 		   iCastType == 1 && iDeliveryType == 0 && Duration(akForm) > 1
 		|| iCastType == 1 && iDeliveryType == 2 && Archetype(akForm) == 22 
@@ -118,7 +118,7 @@ export function SetCosts(option: string, akspell?: Form) {
 		
 		iMag = Math.floor(iMag)
 		if ( iMag < fMin ) { iMag = fMin; }
-		RemoveDescription(spell)
+		// RemoveDescription(spell)
 		SetFloatValue(null, sSpell, iMag);
 		AddDescription(spell, iMag);
 	};
@@ -148,6 +148,8 @@ export function SetCosts(option: string, akspell?: Form) {
 
 // add custom dummy magic effect to spells, with descriptions detailing debuff cost for each spell
 function AddDescription(spell: Form, iMag: number) {
+	RemoveDescription(spell)
+
 	// dummy mgef's to hold custom description
 	const dummySelf = MagicEffect.from(Game.getFormFromFile(0x001C41, "Lorica Redone.esp"));
 	const dummyAimed = MagicEffect.from(Game.getFormFromFile(0x001E53, "Lorica Redone.esp"));
@@ -160,7 +162,6 @@ function AddDescription(spell: Form, iMag: number) {
 	const Effect = S.getNthEffectMagicEffect(0);
 	const iDeliveryType = Effect.getDeliveryType();
 
-	RemoveDescription(spell)
 	
 	
 	if ( iDeliveryType == 0 ) { AddMagicEffectToSpell(S, dummySelf, iMag, 0, longtime, 0) }; // '0' is target self
@@ -170,7 +171,7 @@ function AddDescription(spell: Form, iMag: number) {
 
 function RemoveDescription(akSpell: Form | Spell) {
 	const S = Spell.from(akSpell)
-	// if ( !S ) { return;}
+	if ( !S ) { printConsole(`RemoveDescription:: Failed => ${akSpell} failed`); return}
 	for ( var i = 0; i < S.getNumEffects(); i++ ) { 
 		if (  S.getNthEffectMagicEffect(i)?.getName().toLowerCase().includes('sustain spell') )  { 
 			// RemoveMagicEffectFromSpell(S, removeeffect, removeMag, 0, removeDur  );

@@ -9,3 +9,4 @@ build
 *.pas
 dev
 *.hidden
+spTextUtils.ts
