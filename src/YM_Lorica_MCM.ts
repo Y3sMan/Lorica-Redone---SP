@@ -1,21 +1,22 @@
-import { on, once, printConsole, Form, Game, Input, DxScanCode, browser, hooks, settings, writeLogs } from  "skyrimPlatform";
-import { StringListAdd, SetStringValue, GetStringValue, SetIntValue, GetIntValue, StringListCopy, StringListToArray, StringListClear, debug_GetStringListKey } from "@skyrim-platform/papyrus-util/StorageUtil";
+import { once, Form, Game, hooks } from  "skyrimPlatform";
+import { StringListAdd, GetStringValue, SetIntValue, GetIntValue, StringListToArray, StringListClear } from "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListToArray } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { juKeys, suKeys } from "./YM_Lorica_Shared"
 import { UpdateAllSpells } from "./YM_Lorica_Compat";
+import {CreateWidgets, DestroyLoricaTexts, fadein} from "./LoricaRedone"
+import {GetModSettingBool, GetModSettingInt} from "@skyrim-platform/mcm-helper/MCM"
 
-let focused = false;
-let close = false
-
-browser.loadUrl("file:///Data/Platform/UI/lorica-menu.html"); 
+export const SetPapyrusUtilOptions = function () {
+	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.MAX", GetModSettingInt('Lorica Redone', "iChargeMaxDuration:Charge"))
+	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.SOLUTION", GetModSettingInt('Lorica Redone', "iChargeCostSolution:Charge"))
+	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.UPPERBOUND", GetModSettingInt('Lorica Redone', "iChargeTimeMax:Charge"))
+	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.ASYMPTOTE", GetModSettingInt('Lorica Redone', "iChargeCostMax:Charge"))
+	let c = SetIntValue(null, "YM.LORICA.CHARGE.ENABLE", GetModSettingBool('Lorica Redone', "bSpellChargingEnable:Charge") ? 1:0)
+	let x = SetIntValue(null, "YM.LORICA.CHARGE.WIDGET.X", GetModSettingInt('Lorica Redone', "iWidgetX:Charge"))
+	let y = SetIntValue(null, "YM.LORICA.CHARGE.WIDGET.Y", GetModSettingInt('Lorica Redone', "iWidgetY:Charge"))
+	// printConsole(`SetPapyrusUtilOptions:: => x:: ${x} and y:: ${y}`)
+}
 export let mainMCM = () => {
-
-	 on('menuClose', (event) => { SetIntValue(null, "YM.Lorica.MCM.MenuFlag", 0) }); 
-	on('menuOpen', () => {
-		if ( GetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 0) == 1) { 
-			once('update', () => { SetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 0) });
-		};
-	})
 	once('update', () => {
 		const player = Game.getPlayer();
 		if (player) {
@@ -33,63 +34,62 @@ export let mainMCM = () => {
 			);
 			player.registerForModEvent(
 				"LoricaRedone_Menu_Close_Update", 
-				"OnQueuedChange"
+				"OnLoricaClose"
 			);
+			SetPapyrusUtilOptions()
 		// ListCompile()
 	});
-
+	once('newGame', () => {
+		SetPapyrusUtilOptions()
+	});
+	once('loadGame', () => {
+		SetPapyrusUtilOptions()
+	});
+	// Event for when Lorica's menu opens
 	hooks.sendPapyrusEvent.add(
 		{
 			enter(ctx) {
-				printConsole(`${ctx.papyrusEventName} has been caught`)
-				// SetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 1)
+				fadein(0.1)
 				FillMCMOptions()
-		 	},
-		},
-		0x14,
-		0x14,
-		'OnLoricaOpen'
-	  );
-	hooks.sendPapyrusEvent.add(
-		{
-			enter(ctx) {
-				printConsole(`${ctx.papyrusEventName} has been caught`)
-				// SetIntValue(null, "YM.Lorica.MCM.MenuOpenFlag", 1)
-				FillMCMOptions()
-		 	},
-		},
-		0x14,
-		0x14,
-		'OnInputClear'
-	  );
-	hooks.sendPapyrusEvent.add(
-		{
-			enter(ctx) {
-				printConsole(`${ctx.papyrusEventName} has been caught`)
+				// wait for the menu to close
 				once('menuClose', () => {
-					UpdateAllSpells()
+					// const bcharging: number = GetModSettingBool('LoricaRedone',"bSpellChargingEnable:Charge") ? 0 : 1
+					// printConsole( SetIntValue(null, suKeys.bChargingEnable, bcharging) )
+					// the reason the condiitonals are swapped is because somehow the variables get swapped when casting from MCM Helper's ModSetting to Papyrus as an Int
+					SetPapyrusUtilOptions()
+					if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0) {
+						// printConsole('Destroying widgets')
+						DestroyLoricaTexts()
+					}
+					if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 1) {
+						// printConsole('Creating widgets')
+						DestroyLoricaTexts()
+						CreateWidgets()	
+					}
+					if ( GetIntValue(null, "YM.LORICA.MCM.UPDATE", 0) == 1) {UpdateAllSpells();}
+					SetIntValue(null, "YM.LORICA.MCM.UPDATE", 0)
+					
 				})
-		 	},
+			},
 		},
 		0x14,
 		0x14,
-		'OnQueuedChange'
-	  );
-	//   event for when player inputs in the Upkeep search option; filters the enum menus accordingly
-	  hooks.sendPapyrusEvent.add(
-		{
-			enter(ctx) {
-				printConsole(`${ctx.papyrusEventName} has been caught`)
-				FilterMCMOptions(GetStringValue(null, "YM.Lorica.Menu.Upkeep.Input", ''))
-		 	},
+		'OnLoricaOpen' || 'OnInputClear'
+	);
+	// Event to handle filtering the menu options
+	hooks.sendPapyrusEvent.add(
+	{
+		enter(ctx) {
+			// printConsole(`${ctx.papyrusEventName} has been caught`)
+			FilterMCMOptions(GetStringValue(null, "YM.Lorica.Menu.Upkeep.Input", ''))
 		},
-		0x14,
-		0x14,
-		'OnUpkeepInput'
-	  );
+	},
+	0x14,
+	0x14,
+	'OnUpkeepInput'
+	);
 }
 
-import { log } from './YM_Lorica_Shared'
 var FormsToStringNames = (forms: Form[], key: string) => {
 	let stringlist: string[] = ['No Changes']
 	if (!forms){return;};
