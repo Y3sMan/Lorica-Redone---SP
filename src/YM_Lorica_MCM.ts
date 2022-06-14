@@ -2,7 +2,7 @@ import { once, Form, Game, hooks, printConsole } from  "skyrimPlatform";
 import { StringListAdd, GetStringValue, SetIntValue, GetIntValue, StringListToArray, StringListClear, UnsetStringValue, StringListPluck, StringListGet, SetFloatValue, SetStringValue, GetFloatValue } from "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListAdd, FormListRemove, FormListToArray, Save } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { juKeys, suKeys } from "./YM_Lorica_Shared"
-import { UpdateAllSpells } from "./YM_Lorica_Compat";
+import { DisableLorica, EnableLorica, RemoveSpells, UpdateAllSpells } from "./YM_Lorica_Compat";
 import {CreateWidgets, DestroyLoricaTexts, fadein} from "./LoricaRedone"
 import * as mcm from "@skyrim-platform/mcm-helper/MCM"
 import * as sp from 'skyrimPlatform'
@@ -70,31 +70,25 @@ export let mainMCM = () => {
 		SetPapyrusUtilOptions()
 	});
 	// Event for when Lorica's menu opens
-	hooks.sendPapyrusEvent.add(
-		{
+	hooks.sendPapyrusEvent.add( {
 			enter(ctx) {
 				fadein(0.1)
 				FillMCMOptions()
 				// wait for the menu to close
 				once('menuClose', () => {
-					// const bcharging: number = mcm.GetModSettingBool('LoricaRedone',"bSpellChargingEnable:Charge") ? 0 : 1
-					// printConsole( SetIntValue(null, suKeys.bChargingEnable, bcharging) )
 					// the reason the conditonals are swapped is because somehow the variables get swapped when casting from MCM Helper's ModSetting to Papyrus as an Int
 					SetPapyrusUtilOptions()
 					UnsetStringValue(null, "YM.Lorica.Menu.Upkeep.Input")
 					UnsetStringValue(null, "YM.Lorica.Menu.Utility.Input")
-					if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0) {
-						// printConsole('Destroying widgets')
-						DestroyLoricaTexts()
-					}
-					if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 1) {
-						// printConsole('Creating widgets')
-						DestroyLoricaTexts()
-						CreateWidgets()	
-					}
 
-					if ( GetIntValue(null, "YM.LORICA.MCM.UPDATE", 0) == 1) {UpdateAllSpells();}
-					SetIntValue(null, "YM.LORICA.MCM.UPDATE", 0)
+					if (GetIntValue(null, suKeys.bModOn, 1) == 0) {
+						DisableLorica()
+						return
+					}
+					if (GetIntValue(null, suKeys.bModOn, 1) == 1) { EnableLorica() }
+					
+					if ( GetIntValue(null, suKeys.bMCMflag, 0) == 1 && GetIntValue(null, suKeys.bModOn, 1) == 1) {UpdateAllSpells();}
+					SetIntValue(null, suKeys.bMCMflag, 0)
 					
 				})
 			},
@@ -117,8 +111,7 @@ export let mainMCM = () => {
 	'OnPageSelect'
 	);
 	// Event that fires when one of Lorica's mcm settings changes
-	hooks.sendPapyrusEvent.add(
-	{
+	hooks.sendPapyrusEvent.add({
 		enter(ctx) {
 			printConsole(`${ctx.papyrusEventName} has been caught`)
 			once('update', () => {
@@ -131,13 +124,13 @@ export let mainMCM = () => {
 					value = mcm.GetModSettingInt(modname, setting) 
 					if (value == 0) {return;}
 					const mainKey = "YM.Lorica.MCM.Enum."
-					const blacklist_whitelist = function (list: string) {
-						let key = ''
-						if (list.toLowerCase().includes('white')) {
-							list	
-						}
-						// const selected = StringListPluck(null, )
-					}
+					// const blacklist_whitelist = function (list: string) {
+					// 	let key = ''
+					// 	if (list.toLowerCase().includes('white')) {
+					// 		list	
+					// 	}
+					// 	// const selected = StringListPluck(null, )
+					// }
 					const selected = StringListPluck(null, mainKey + 'Upkeep', value, 'None')
 					StringListAdd(null, mainKey + 'Blacklist', selected)
 					// const f = Game.getFormEx(GetIntValue(null, selected, -1)) 
@@ -162,14 +155,18 @@ export let mainMCM = () => {
 				else if (setting[0] == 's'){
 					value = mcm.GetModSettingString(modname, setting) 
 					// @ts-ignore
+					if (setting.toLowerCase().includes('ssearch')){
+						FilterMCMOptions(value)
+					}
 					// SetStringValue(null, Settings_to_Keys[setting], value)
 				}
 				printConsole(`The changed setting is ${setting} and its new value is ${value}`)
 				// @ts-ignore 
 				// SetFloatValue(null, Settings_to_Keys[setting], value ) 
-
+				SetIntValue(null, suKeys.bMCMflag, 1)
 			});
 			SetMenuOptions()
+			RefreshMCM()
 		},
 	},
 	0x14,
@@ -261,5 +258,5 @@ enum Setting_to_List {
 	'iSelectedSpellWhitelist:Lists' = 'Upkeep',
 	'iSelectedSpellBlacklist:Lists' = 'Blacklist',
 	'iSelectedUtilityWhitelist:Lists' = 'Exclusion',
-	'iSelectedUtilityBlacklist:Lists' = 'Upkeep',
+	// 'iSelectedUtilityBlacklist:Lists' = 'Upkeep',
 }

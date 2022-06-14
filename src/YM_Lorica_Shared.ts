@@ -34,6 +34,7 @@ export function log(message: any){
 
 export enum suKeys {
 	main = "LoricaRedone",
+	bModOn = '.YM.LoricaRedone.ON.',
 	iCostList = "Individual Upkeep Cost of all Maintained Spells",
 	formUpkeepList = "Upkeep Spells",
 	formBlackList = "Spells Blacklisted from Lorica",
@@ -56,6 +57,8 @@ export enum suKeys {
 	bAutoCompatibility = 'YM.Lorica.AutoCompat.',
 	iExperienceRefreshRate = 'YM.Lorica.Experience.RefreshRate',
 	fExperienceMult = 'YM.Lorica.Experience.Mult',
+
+	bMCMflag = "YM.LORICA.MCM.UPDATE"
 
 
 	iChargeMaxDuration = 'YM.LORICA.CHARGE.DURATION.MAX', // max any spell should last, in minutes

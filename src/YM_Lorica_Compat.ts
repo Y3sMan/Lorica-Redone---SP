@@ -43,12 +43,8 @@ export let mainCompat = () => {
 			Save(juKeys.path)
 			
 			UpdateAllSpells()
-			// CleanUp()
-			
-			// printConsole(FormListCount(juKeys.path, suKeys.formUpkeepList))
 			SetIntValue(null, suKeys.bCompatInitialized, 1)
 			printConsole("Lorica Redone started");
-		// };
 	}); 
 }
 
@@ -186,4 +182,51 @@ function RemoveDescription(akSpell: Form | Spell) {
 			RemoveEffectItemFromSpell(S, S, i)
 			// printConsole(`${S?.getName()} was removed`)
 		}};
+}
+
+function RemoveAllDescriptions() {
+	for ( let i = 0; i < FormListCount(juKeys.path, suKeys.formUpkeepList); i++) {
+		const formspell = FormListGet(juKeys.path, suKeys.formUpkeepList, i);
+		if ( !formspell || !isRightSpellType(formspell) ) { return; };
+		RemoveDescription(formspell)
+	};
+}
+function RemoveLoricaSpellsFromPlayer() {
+	once('update', () => {
+		const spellCum =  Spell.from(Game.getFormFromFile(0x1A33, "Lorica Redone.esp")) // the spell responsible for the Cumulative penalty
+		const spellUpkeep =  Spell.from(Game.getFormFromFile(0x1c40, "Lorica Redone.esp")) // the spell responsible for the Total Upkeep penalty
+		const spellDispel = Game.getFormFromFile('FILL WITH CORRECT ID', "Lorica Redone.esp")?.getFormID();
+		
+		const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
+	
+		pl()!.removeSpell(spellCum);
+		pl()!.removeSpell(spellUpkeep);
+	
+		spellCum.setNthEffectMagnitude(0, 0);
+		spellUpkeep.setNthEffectMagnitude(0, 0);
+	})
+}
+
+export function DisableLorica() {
+	RemoveAllDescriptions()
+	RemoveLoricaSpellsFromPlayer()
+}
+export function EnableLorica() {
+	const addingspells = async () => {
+		await Utility.wait(0.1)
+		const spellCum =  Spell.from(Game.getFormFromFile(0x1A33, "Lorica Redone.esp")) // the spell responsible for the Cumulative penalty
+		const spellUpkeep =  Spell.from(Game.getFormFromFile(0x1c40, "Lorica Redone.esp")) // the spell responsible for the Total Upkeep penalty
+		const spellDispel = Game.getFormFromFile('FILL WITH CORRECT ID', "Lorica Redone.esp")?.getFormID();
+		
+		const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
+		const player: Actor = pl()
+		// check if player already has the spells, i.e. whether lorica is already enabled
+		if (player.hasSpell(spellCum) || player.hasSpell(spellUpkeep) || player.hasSpell(spellDispel) ) {return;}
+		player.addSpell(spellCum, false);
+		player.addSpell(spellDispel, false);
+		player.addSpell(spellUpkeep, false);
+		
+	}
+	addingspells();
+	UpdateAllSpells()
 }
