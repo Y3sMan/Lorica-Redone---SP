@@ -1,8 +1,9 @@
-import { on, printConsole, Form, Game, Spell, Debug, once, FormList, Keyword, MagicEffect, PapyrusObject } from  "skyrimPlatform";
+import { Actor, on, printConsole, Form, Game, Spell, Debug, once, FormList, Keyword, MagicEffect, PapyrusObject } from  "skyrimPlatform";
 import { AddMagicEffectToSpell, GetEffectArchetypeAsInt, GetAllSpells, RemoveMagicEffectFromSpell, GivePlayerSpellBook, RemoveEffectItemFromSpell } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
 import { pl, juKeys, suKeys, FormToString } from "./YM_Lorica_Shared"
 import { FormListAdd, FormListCount, Save, FormListGet, FormListRemove, FormListHas, FormListToArray as UpkeepArray, IntListAdd, IntListToArray } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { GetFloatValue, GetIntValue, SetFloatValue, SetIntValue } from "@skyrim-platform/papyrus-util/StorageUtil";
+import { Utility } from "@skyrim-platform/skyrim-platform";
 
 // this is basically our default init stuff
 export let mainCompat = () => {
@@ -12,23 +13,26 @@ export let mainCompat = () => {
 			const formlistUpkeep = FormList.from(Game.getFormFromFile(0x1D62, "Lorica Redone.esp"))
 			Game.setGameSettingFloat("fMagicLesserPowerCooldownTimer", 0.01); // make lesser powers spammable, to enable spamming the dispel power
 			// if ( !formlistUpkeep ) { return; };
-			
-			var allspells:Spell[]
-			allspells = GetAllSpells(null, true); // GetAllSpells(Keyword[] akKeywords = None, bool abIsPlayable = false)
-			SetIntValue(null, suKeys.iCompatAllSpells, allspells.length)
-			formlistUpkeep?.revert();
-			// -----------------Add all appropriate spells to Lorica----------------------------------------------
-			for ( let i = 0; i < allspells.length; i++ ) {
-				const formSpell = Form.from(allspells[i]);
-				
-				if ( !FormListHas(juKeys.path, suKeys.formBlackList, formSpell) ) {
-					if ( isRightSpellType(formSpell!) ) {
-						IntListAdd(juKeys.path, suKeys.formUpkeepList, formSpell?.getFormID(), false)
-						FormListAdd(juKeys.path, suKeys.formUpkeepList, formSpell, false);
-						// formlistUpkeep?.addForm(formSpell);
+
+			// check if the AutoCompat setting is enabled before proceeding; if disabled, all spells need to be manually added
+			if (GetIntValue(null, suKeys.bAutoCompatibility, 1) == 0) { 
+				var allspells:Spell[]
+				allspells = GetAllSpells(null, true); // GetAllSpells(Keyword[] akKeywords = None, bool abIsPlayable = false)
+				SetIntValue(null, suKeys.iCompatAllSpells, allspells.length)
+				formlistUpkeep?.revert();
+				// -----------------Add all appropriate spells to Lorica----------------------------------------------
+				for ( let i = 0; i < allspells.length; i++ ) {
+					const formSpell = Form.from(allspells[i]);
+					
+					if ( !FormListHas(juKeys.path, suKeys.formBlackList, formSpell) ) {
+						if ( isRightSpellType(formSpell!) ) {
+							IntListAdd(juKeys.path, suKeys.formUpkeepList, formSpell?.getFormID(), false)
+							FormListAdd(juKeys.path, suKeys.formUpkeepList, formSpell, false);
+							// formlistUpkeep?.addForm(formSpell);
+						};
 					};
 				};
-			};
+			}
 			
 			SetIntValue(null, suKeys.bChargingEnable, 1)
 			SetIntValue(null, suKeys.iChargeCostAsymptote, 100)
@@ -102,7 +106,11 @@ const isRightSpellType = (akForm: Form): boolean => {
 export function SetCosts(option: string, akspell?: Form) {
 	// if ( !akspell ) { Debug.notification("something went wrong"); return; }
 	const keywordRitual = Keyword.from(Game.getFormEx(0x806e1))
-	
+	let flag: boolean = false
+	once('update', () => {
+		if (GetIntValue(null, suKeys.bModOn, 1) == 0) {flag = true}
+	})
+	if (flag) {return 'Lorica Redone is disabled'}
 	const main = function ( spell: Form ) {
 		if ( !spell ) { return; };
 		let iMag = 0;

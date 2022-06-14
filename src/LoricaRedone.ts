@@ -9,6 +9,11 @@ import { mainMCM, SetPapyrusUtilOptions } from "./YM_Lorica_MCM"
 import * as wt from "./spTextUtils"
 
 mainMCM();
+
+// If the mod is disabled, prevent the scripts from running. Simple
+once('update', () => {
+	if (GetIntValue(null, suKeys.bModOn, 1) == 0) {return;}
+})
 mainUtilitySpells();
 let bCharging = 1
 let modname = "LoricaRedone"
@@ -52,6 +57,7 @@ export const fadein = async (time: number) => {
 }
 // ---------------------------------COMPATIBILITY SECTION---------------------------------------------
 const spellCompatCheck = function () {
+	if (GetIntValue(null, suKeys.bModOn, 1) == 0) {return;}
 	var allspells: Spell[]
 	allspells = GetAllSpells(null, true);
 	if ( GetIntValue(null, suKeys.iCompatAllSpells) != allspells.length && !GetIntValue(null, suKeys.bCompatInitialized) ) { mainCompat(); };
@@ -70,9 +76,10 @@ once('update', () => {
 	// y_widget = GetIntValue(null, "YM.LORICA.CHARGE.WIDGET.Y", 1000)
 	// if ( !GetIntValue(null, suKeys.bCompatInitialized) ) { return;}
 	// GivePlayerSpellBook(); // debug option
+	if (GetIntValue(null, suKeys.bModOn, 1) == 0) {return;}
 	mainCompat()
 	// spellCompatCheck()
-	destroyAllTexts()
+	// destroyAllTexts()
 	CreateWidgets()
 	DestroyLoricaTexts()
 	CreateWidgets()
