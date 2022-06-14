@@ -1,19 +1,39 @@
-import { once, Form, Game, hooks } from  "skyrimPlatform";
-import { StringListAdd, GetStringValue, SetIntValue, GetIntValue, StringListToArray, StringListClear } from "@skyrim-platform/papyrus-util/StorageUtil";
-import { FormListToArray } from  "@skyrim-platform/papyrus-util/JsonUtil";
+import { once, Form, Game, hooks, printConsole } from  "skyrimPlatform";
+import { StringListAdd, GetStringValue, SetIntValue, GetIntValue, StringListToArray, StringListClear, UnsetStringValue, StringListPluck, StringListGet, SetFloatValue, SetStringValue, GetFloatValue } from "@skyrim-platform/papyrus-util/StorageUtil";
+import { FormListAdd, FormListRemove, FormListToArray, Save } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { juKeys, suKeys } from "./YM_Lorica_Shared"
 import { UpdateAllSpells } from "./YM_Lorica_Compat";
 import {CreateWidgets, DestroyLoricaTexts, fadein} from "./LoricaRedone"
-import {GetModSettingBool, GetModSettingInt} from "@skyrim-platform/mcm-helper/MCM"
+import * as mcm from "@skyrim-platform/mcm-helper/MCM"
+import * as sp from 'skyrimPlatform'
+import { Utility } from "@skyrim-platform/skyrim-platform";
+
+const modname = 'Lorica Redone'
+const ModEvent = (sp as any).ModEvent
+const RefreshMCM = function () {
+	once('update', () => {
+		const handle = ModEvent.Create('YM.LORICA.REFRESH')
+		ModEvent.PushString(handle, 'Refresh')
+		ModEvent.Send(handle)
+	});
+}
+const SetMenuOptions = function () {
+	once('update', () => {
+		const handle = ModEvent.Create('YM.LORICA.REFRESH')
+		ModEvent.PushString(handle, 'SetMenuOptions')
+		ModEvent.Send(handle)
+	});
+	RefreshMCM()
+}
 
 export const SetPapyrusUtilOptions = function () {
-	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.MAX", GetModSettingInt('Lorica Redone', "iChargeMaxDuration:Charge"))
-	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.SOLUTION", GetModSettingInt('Lorica Redone', "iChargeCostSolution:Charge"))
-	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.UPPERBOUND", GetModSettingInt('Lorica Redone', "iChargeTimeMax:Charge"))
-	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.ASYMPTOTE", GetModSettingInt('Lorica Redone', "iChargeCostMax:Charge"))
-	let c = SetIntValue(null, "YM.LORICA.CHARGE.ENABLE", GetModSettingBool('Lorica Redone', "bSpellChargingEnable:Charge") ? 1:0)
-	let x = SetIntValue(null, "YM.LORICA.CHARGE.WIDGET.X", GetModSettingInt('Lorica Redone', "iWidgetX:Charge"))
-	let y = SetIntValue(null, "YM.LORICA.CHARGE.WIDGET.Y", GetModSettingInt('Lorica Redone', "iWidgetY:Charge"))
+	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.MAX", mcm.GetModSettingInt(modname, "iChargeMaxDuration:Charge"))
+	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.SOLUTION", mcm.GetModSettingInt(modname, "iChargeCostSolution:Charge"))
+	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.UPPERBOUND", mcm.GetModSettingInt(modname, "iChargeTimeMax:Charge"))
+	SetIntValue(null, "YM.LORICA.CHARGE.DURATION.ASYMPTOTE", mcm.GetModSettingInt(modname, "iChargeCostMax:Charge"))
+	let c = SetIntValue(null, "YM.LORICA.CHARGE.ENABLE", mcm.GetModSettingBool(modname, "bSpellChargingEnable:Charge") ? 1:0)
+	let x = SetIntValue(null, "YM.LORICA.CHARGE.WIDGET.X", mcm.GetModSettingInt(modname, "iWidgetX:Charge"))
+	let y = SetIntValue(null, "YM.LORICA.CHARGE.WIDGET.Y", mcm.GetModSettingInt(modname, "iWidgetY:Charge"))
 	// printConsole(`SetPapyrusUtilOptions:: => x:: ${x} and y:: ${y}`)
 }
 export let mainMCM = () => {
@@ -25,8 +45,8 @@ export let mainMCM = () => {
 				"OnLoricaOpen"
 			);}
 			player.registerForModEvent(
-				"LoricaRedone_Menu_Upkeep_Input", 
-				"OnUpkeepInput"
+				"LoricaRedone_MCM_PageSelect", 
+				"OnPageSelect"
 			);
 			player.registerForModEvent(
 				"LoricaRedone_Menu_Upkeep_Input_Clear", 
@@ -35,6 +55,10 @@ export let mainMCM = () => {
 			player.registerForModEvent(
 				"LoricaRedone_Menu_Close_Update", 
 				"OnLoricaClose"
+			);
+			player.registerForModEvent(
+				"YM.LORICA.SETTING_CHANGED", 
+				"OnSettingChanged"
 			);
 			SetPapyrusUtilOptions()
 		// ListCompile()
@@ -53,10 +77,12 @@ export let mainMCM = () => {
 				FillMCMOptions()
 				// wait for the menu to close
 				once('menuClose', () => {
-					// const bcharging: number = GetModSettingBool('LoricaRedone',"bSpellChargingEnable:Charge") ? 0 : 1
+					// const bcharging: number = mcm.GetModSettingBool('LoricaRedone',"bSpellChargingEnable:Charge") ? 0 : 1
 					// printConsole( SetIntValue(null, suKeys.bChargingEnable, bcharging) )
-					// the reason the condiitonals are swapped is because somehow the variables get swapped when casting from MCM Helper's ModSetting to Papyrus as an Int
+					// the reason the conditonals are swapped is because somehow the variables get swapped when casting from MCM Helper's ModSetting to Papyrus as an Int
 					SetPapyrusUtilOptions()
+					UnsetStringValue(null, "YM.Lorica.Menu.Upkeep.Input")
+					UnsetStringValue(null, "YM.Lorica.Menu.Utility.Input")
 					if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0) {
 						// printConsole('Destroying widgets')
 						DestroyLoricaTexts()
@@ -66,6 +92,7 @@ export let mainMCM = () => {
 						DestroyLoricaTexts()
 						CreateWidgets()	
 					}
+
 					if ( GetIntValue(null, "YM.LORICA.MCM.UPDATE", 0) == 1) {UpdateAllSpells();}
 					SetIntValue(null, "YM.LORICA.MCM.UPDATE", 0)
 					
@@ -76,17 +103,78 @@ export let mainMCM = () => {
 		0x14,
 		'OnLoricaOpen' || 'OnInputClear'
 	);
-	// Event to handle filtering the menu options
+	// Event for when a page is selected
 	hooks.sendPapyrusEvent.add(
 	{
 		enter(ctx) {
-			// printConsole(`${ctx.papyrusEventName} has been caught`)
-			FilterMCMOptions(GetStringValue(null, "YM.Lorica.Menu.Upkeep.Input", ''))
+			printConsole(`${ctx.papyrusEventName} has been caught`)
+			// FilterMCMOptions(GetStringValue(null, "YM.Lorica.Menu.Upkeep.Input", ''))
+			FillMCMOptions()
 		},
 	},
 	0x14,
 	0x14,
-	'OnUpkeepInput'
+	'OnPageSelect'
+	);
+	// Event that fires when one of Lorica's mcm settings changes
+	hooks.sendPapyrusEvent.add(
+	{
+		enter(ctx) {
+			printConsole(`${ctx.papyrusEventName} has been caught`)
+			once('update', () => {
+				const setting = GetStringValue(null, 'YM.LoricaRedone.SETTING_CHANGED')
+				printConsole(setting)
+				// if (setting.toLowerCase().includes('search') || setting.toLowerCase().includes('list')) {return;}
+				var value 
+				var e: number | string = 1 
+				if ( setting.toLowerCase().includes('list') ) {
+					value = mcm.GetModSettingInt(modname, setting) 
+					if (value == 0) {return;}
+					const mainKey = "YM.Lorica.MCM.Enum."
+					const blacklist_whitelist = function (list: string) {
+						let key = ''
+						if (list.toLowerCase().includes('white')) {
+							list	
+						}
+						// const selected = StringListPluck(null, )
+					}
+					const selected = StringListPluck(null, mainKey + 'Upkeep', value, 'None')
+					StringListAdd(null, mainKey + 'Blacklist', selected)
+					// const f = Game.getFormEx(GetIntValue(null, selected, -1)) 
+					// FormListAdd(juKeys.path, suKeys.formBlackList, f, true)
+					// FormListRemove(juKeys.path, suKeys.formUpkeepList, f, true)
+					// if (value == 0) { return; }
+					// if (value != 0) {value++}
+				}
+				else if (setting[0] == 'f'){
+					value = mcm.GetModSettingFloat(modname, setting) 
+					printConsole( SetFloatValue(null, Settings_to_Keys[setting], value) )
+				}
+				else if (setting[0] == 'b'){
+					value = mcm.GetModSettingBool(modname, setting) ? 1:0
+					printConsole( SetIntValue(null, Settings_to_Keys[setting], value) )
+				}
+				else if (setting[0] == 'i'){
+					value = mcm.GetModSettingInt(modname, setting) 
+					// @ts-ignore
+					printConsole( SetIntValue(null, Settings_to_Keys[setting], value) )
+				}
+				else if (setting[0] == 's'){
+					value = mcm.GetModSettingString(modname, setting) 
+					// @ts-ignore
+					// SetStringValue(null, Settings_to_Keys[setting], value)
+				}
+				printConsole(`The changed setting is ${setting} and its new value is ${value}`)
+				// @ts-ignore 
+				// SetFloatValue(null, Settings_to_Keys[setting], value ) 
+
+			});
+			SetMenuOptions()
+		},
+	},
+	0x14,
+	0x14,
+	'OnSettingChanged'
 	);
 }
 
@@ -120,14 +208,19 @@ function FillMCMOptions () {
 	
 	a = FormListToArray(juKeys.path, suKeys.formExclusionList)
 	FormsToStringNames(a, "YM.Lorica.MCM.Enum.Exclusion")
+	SetMenuOptions()
+	RefreshMCM()
+	// printConsole('refreshmenu has been sent')
 };
 
 // Function to clear and refill the mcm menu lists according to a filter criteria
 function FilterMCMOptions (query: String) {
 	if ( !query ) { query = '';};
 	// FillMCMOptions()
-	let keys = [ "YM.Lorica.MCM.Enum.Upkeep", "YM.Lorica.MCM.Enum.Blacklist", "YM.Lorica.MCM.Enum.Exclusion" ]
+	const mainKey = "YM.Lorica.MCM.Enum."
+	let keys = [ "Upkeep", "Blacklist", "Exclusion" ]
 	keys.forEach(key => {
+		key = mainKey + key
 		let filtered = FilterOptions(StringListToArray(null, key), query)
 		filtered.unshift('No Changes')
 		StringListClear(null, key)
@@ -135,7 +228,7 @@ function FilterMCMOptions (query: String) {
 			StringListAdd(null, key, f, false)
 		})
 	})
-
+	SetMenuOptions()
 }
 
 function FilterOptions (arr, query) {
@@ -144,3 +237,29 @@ function FilterOptions (arr, query) {
 	})
 }
 
+enum Settings_to_Keys {
+	"bAutoCompatibility:Main" = suKeys.bAutoCompatibility,
+	"fCostMultiplier:Main" = suKeys.fCostMult,
+	"fRitualCostMultiplier:Main" = suKeys.fRitualMult,
+	"iExperienceRefreshRate:Main" = suKeys.iExperienceRefreshRate,
+	"fExperienceMult:Main" = suKeys.fExperienceMult,
+	"iMinCost:Main" = suKeys.iDebuffMin,
+	"bSpellChargingEnable:Charge" = suKeys.bChargingEnable,
+	"iChargeMaxDuration:Charge" = suKeys.iChargeMaxDuration,
+	"iChargeCostSolution:Charge" = suKeys.iChargeCostSolution,
+	"iChargeTimeMax:Charge" = suKeys.iChargeMaxDuration,
+	"iChargeCostMax:Charge" = suKeys.iChargeCostAsymptote,
+	"iWidgetX:Charge" = suKeys.iWidgetX,
+	"iWidgetY:Charge" = suKeys.iWidgetY, 
+	"bSustainedMagicMode:Optional" = suKeys.bSustainedMagic,
+	// "bSearchButton" = suKeys.
+	// "sSearch"
+	// "bSearchClear"
+
+}
+enum Setting_to_List {
+	'iSelectedSpellWhitelist:Lists' = 'Upkeep',
+	'iSelectedSpellBlacklist:Lists' = 'Blacklist',
+	'iSelectedUtilityWhitelist:Lists' = 'Exclusion',
+	'iSelectedUtilityBlacklist:Lists' = 'Upkeep',
+}

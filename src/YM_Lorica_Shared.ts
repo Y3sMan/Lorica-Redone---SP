@@ -53,12 +53,18 @@ export enum suKeys {
 	MCM_Enum_Upkeep = "YM.Lorica.MCM.Enum.Upkeep",
 	MCM_Enum_Blacklist = "YM.Lorica.MCM.Enum.Blacklist",
 	MCM_Enum_Utility = "YM.Lorica.MCM.Enum.Exclusion",
+	bAutoCompatibility = 'YM.Lorica.AutoCompat.',
+	iExperienceRefreshRate = 'YM.Lorica.Experience.RefreshRate',
+	fExperienceMult = 'YM.Lorica.Experience.Mult',
+
 
 	iChargeMaxDuration = 'YM.LORICA.CHARGE.DURATION.MAX', // max any spell should last, in minutes
 	iChargeDurationUpperBound = 'YM.LORICA.CHARGE.DURATION.UPPERBOUND', // Max any spell should have to charge, in seconds
 	iChargeCostSolution = 'YM.LORICA.CHARGE.DURATION.SOLUTION',
 	iChargeCostAsymptote = 'YM.LORICA.CHARGE.DURATION.ASYMPTOTE', // the upper cost limit where the 3rd step takes over (i.e. the charge time levels out)
-	bChargingEnable = 'YM.LORICA.CHARGE.ENABLE'
+	bChargingEnable = 'YM.LORICA.CHARGE.ENABLE',
+	iWidgetX = "YM.LORICA.CHARGE.WIDGET.X",	
+	iWidgetY = "YM.LORICA.CHARGE.WIDGET.Y"
 };
 
 export enum juKeys {
