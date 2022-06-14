@@ -58,7 +58,7 @@ export enum suKeys {
 	iExperienceRefreshRate = 'YM.Lorica.Experience.RefreshRate',
 	fExperienceMult = 'YM.Lorica.Experience.Mult',
 
-	bMCMflag = "YM.LORICA.MCM.UPDATE"
+	bMCMflag = "YM.LORICA.MCM.UPDATE",
 
 
 	iChargeMaxDuration = 'YM.LORICA.CHARGE.DURATION.MAX', // max any spell should last, in minutes
