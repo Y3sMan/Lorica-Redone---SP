@@ -2,7 +2,7 @@ import { once, Form, Game, hooks, printConsole } from  "skyrimPlatform";
 import { StringListAdd, GetStringValue, SetIntValue, GetIntValue, StringListToArray, StringListClear, UnsetStringValue, StringListPluck, StringListGet, SetFloatValue, SetStringValue, GetFloatValue } from "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListAdd, FormListRemove, FormListToArray, Save } from  "@skyrim-platform/papyrus-util/JsonUtil";
 import { juKeys, suKeys } from "./YM_Lorica_Shared"
-import { DisableLorica, EnableLorica, RemoveSpells, UpdateAllSpells } from "./YM_Lorica_Compat";
+import { DisableLorica, EnableLorica, UpdateAllSpells } from "./YM_Lorica_Compat";
 import {CreateWidgets, DestroyLoricaTexts, fadein} from "./LoricaRedone"
 import * as mcm from "@skyrim-platform/mcm-helper/MCM"
 import * as sp from 'skyrimPlatform'
@@ -69,21 +69,25 @@ export let mainMCM = () => {
 	once('loadGame', () => {
 		SetPapyrusUtilOptions()
 	});
-	// Event for when Lorica's menu opens
+	// Event for when Lorica's menu opens or closes
 	hooks.sendPapyrusEvent.add( {
 			enter(ctx) {
+				printConsole(`${ctx.papyrusEventName} has been caught`)
 				fadein(0.1)
 				FillMCMOptions()
+				// UnsetStringValue(null, "YM.Lorica.Menu.Upkeep.Input")
+				// UnsetStringValue(null, "YM.Lorica.Menu.Utility.Input")
+				mcm.SetModSettingString(modname, 'sSearch:Lists', '')
+				mcm.SetModSettingBool(modname, 'bSearchButton:Lists', false )
+				mcm.SetModSettingBool(modname, 'bSearchClear:Lists', false )
 				// wait for the menu to close
 				once('menuClose', () => {
 					// the reason the conditonals are swapped is because somehow the variables get swapped when casting from MCM Helper's ModSetting to Papyrus as an Int
 					SetPapyrusUtilOptions()
-					UnsetStringValue(null, "YM.Lorica.Menu.Upkeep.Input")
-					UnsetStringValue(null, "YM.Lorica.Menu.Utility.Input")
 
 					if (GetIntValue(null, suKeys.bModOn, 1) == 0) {
 						DisableLorica()
-						return
+						// return
 					}
 					if (GetIntValue(null, suKeys.bModOn, 1) == 1) { EnableLorica() }
 					
@@ -113,14 +117,13 @@ export let mainMCM = () => {
 	// Event that fires when one of Lorica's mcm settings changes
 	hooks.sendPapyrusEvent.add({
 		enter(ctx) {
-			printConsole(`${ctx.papyrusEventName} has been caught`)
 			once('update', () => {
 				const setting = GetStringValue(null, 'YM.LoricaRedone.SETTING_CHANGED')
 				printConsole(setting)
 				// if (setting.toLowerCase().includes('search') || setting.toLowerCase().includes('list')) {return;}
 				var value 
 				var e: number | string = 1 
-				if ( setting.toLowerCase().includes('list') ) {
+				if ( setting.toLowerCase().includes('list') && !setting.toLowerCase().includes('search')) {
 					value = mcm.GetModSettingInt(modname, setting) 
 					if (value == 0) {return;}
 					const mainKey = "YM.Lorica.MCM.Enum."
@@ -146,6 +149,9 @@ export let mainMCM = () => {
 				else if (setting[0] == 'b'){
 					value = mcm.GetModSettingBool(modname, setting) ? 1:0
 					printConsole( SetIntValue(null, Settings_to_Keys[setting], value) )
+					mcm.SetModSettingBool(modname, 'bSearchButton:Lists', false )
+					mcm.SetModSettingBool(modname, 'bSearchClear:Lists', false )
+					if (setting.toLowerCase().includes('searchclear')){FillMCMOptions()}
 				}
 				else if (setting[0] == 'i'){
 					value = mcm.GetModSettingInt(modname, setting) 
@@ -154,8 +160,7 @@ export let mainMCM = () => {
 				}
 				else if (setting[0] == 's'){
 					value = mcm.GetModSettingString(modname, setting) 
-					// @ts-ignore
-					if (setting.toLowerCase().includes('ssearch')){
+					if (setting.toLowerCase().includes('search')){
 						FilterMCMOptions(value)
 					}
 					// SetStringValue(null, Settings_to_Keys[setting], value)
@@ -194,7 +199,7 @@ var FormsToStringNames = (forms: Form[], key: string) => {
 };
 
 function FillMCMOptions () {
-	
+	FilterMCMOptions('')	
 	var a: Form[] 
 	
 	a = FormListToArray(juKeys.path, suKeys.formUpkeepList)
@@ -215,10 +220,12 @@ function FilterMCMOptions (query: String) {
 	if ( !query ) { query = '';};
 	// FillMCMOptions()
 	const mainKey = "YM.Lorica.MCM.Enum."
+	// arr = mainKey + arr
 	let keys = [ "Upkeep", "Blacklist", "Exclusion" ]
 	keys.forEach(key => {
 		key = mainKey + key
 		let filtered = FilterOptions(StringListToArray(null, key), query)
+		if (!filtered){return;}
 		filtered.unshift('No Changes')
 		StringListClear(null, key)
 		filtered.forEach(f => {
@@ -226,14 +233,32 @@ function FilterMCMOptions (query: String) {
 		})
 	})
 	SetMenuOptions()
+	RefreshMCM()
 }
 
-function FilterOptions (arr, query) {
+function FilterOptions (arr: string[], query: string) {
+	if (!arr) {return arr}
 	return arr.filter(function(el) {
 		return el.toLowerCase().indexOf(query.toLowerCase()) !== -1
 	})
 }
-
+// enum MCMSettings {
+// 		= "bAutoCompatibility:Main" ,
+// 	= "fCostMultiplier:Main" ,
+// 	= "fRitualCostMultiplier:Main" ,
+// 	= "iExperienceRefreshRate:Main" ,
+// 	= "fExperienceMult:Main" ,
+// 	= "iMinCost:Main" ,
+// 	= "bSpellChargingEnable:Charge" ,
+// 	= "iChargeMaxDuration:Charge" ,
+// 	= "iChargeCostSolution:Charge" ,
+// 	= "iChargeTimeMax:Charge" ,
+// 	= "iChargeCostMax:Charge" ,
+// 	= "iWidgetX:Charge" ,
+// 	= "iWidgetY:Charge" ,
+// 	= "bSustainedMagicMode:Optional" ,
+// 	= "bLoricaOn:Main" ,
+// }
 enum Settings_to_Keys {
 	"bAutoCompatibility:Main" = suKeys.bAutoCompatibility,
 	"fCostMultiplier:Main" = suKeys.fCostMult,
@@ -249,6 +274,7 @@ enum Settings_to_Keys {
 	"iWidgetX:Charge" = suKeys.iWidgetX,
 	"iWidgetY:Charge" = suKeys.iWidgetY, 
 	"bSustainedMagicMode:Optional" = suKeys.bSustainedMagic,
+	"bLoricaOn:Main" = suKeys.bModOn
 	// "bSearchButton" = suKeys.
 	// "sSearch"
 	// "bSearchClear"
@@ -257,6 +283,6 @@ enum Settings_to_Keys {
 enum Setting_to_List {
 	'iSelectedSpellWhitelist:Lists' = 'Upkeep',
 	'iSelectedSpellBlacklist:Lists' = 'Blacklist',
-	'iSelectedUtilityWhitelist:Lists' = 'Exclusion',
+	'iSelectedUtilityWhitelist:Lists' = 'Exclusion'
 	// 'iSelectedUtilityBlacklist:Lists' = 'Upkeep',
 }
