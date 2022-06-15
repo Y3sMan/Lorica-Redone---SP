@@ -2,15 +2,18 @@ import { Actor, on, printConsole, Form, Game, Spell, Debug, once, FormList, Keyw
 import { AddMagicEffectToSpell, GetEffectArchetypeAsInt, GetAllSpells, RemoveMagicEffectFromSpell, GivePlayerSpellBook, RemoveEffectItemFromSpell } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
 import { pl, juKeys, suKeys, FormToString } from "./YM_Lorica_Shared"
 import { FormListAdd, FormListCount, Save, FormListGet, FormListRemove, FormListHas, FormListToArray as UpkeepArray, IntListAdd, IntListToArray } from  "@skyrim-platform/papyrus-util/JsonUtil";
-import { GetFloatValue, GetIntValue, SetFloatValue, SetIntValue } from "@skyrim-platform/papyrus-util/StorageUtil";
+import { debug_GetIntKey, GetFloatValue, GetIntValue, SetFloatValue, SetIntValue } from "@skyrim-platform/papyrus-util/StorageUtil";
 import { Utility } from "@skyrim-platform/skyrim-platform";
+import { debug } from "console";
+import { CreateWidgets, DestroyLoricaTexts } from "./LoricaRedone";
+import { DispelSpells } from "./YM_Lorica_UtilitySpells";
 
 // this is basically our default init stuff
 export let mainCompat = () => {
 	// --------------------------COMPATABILITY SECTION-------------------------------------------
 	once('update', () => {
 		// if ( GetIntValue(null, suKeys.bCompatInitialized, 0) == 0 ) {
-			const formlistUpkeep = FormList.from(Game.getFormFromFile(0x1D62, "Lorica Redone.esp"))
+			const formlistUpkeep = FormList.from(Game.getFormFromFile(0xD62, "Lorica Redone.esp"))
 			Game.setGameSettingFloat("fMagicLesserPowerCooldownTimer", 0.01); // make lesser powers spammable, to enable spamming the dispel power
 			// if ( !formlistUpkeep ) { return; };
 
@@ -114,7 +117,8 @@ export function SetCosts(option: string, akspell?: Form) {
 		const fCost = Spell.from(spell)!.getEffectiveMagickaCost(pl());
 		
 		if ( spell.hasKeyword(keywordRitual) ) { iMag =  fCost * GetFloatValue(null, suKeys.fRitualMult, 0.5); }
-		else { iMag = fCost * GetFloatValue(null, suKeys.fCostMult, 0.5);
+		else { 
+			iMag = fCost * GetFloatValue(null, suKeys.fCostMult, 0.5);
 			// printConsole("SETCOSTS:: GetFloatValue(null, suKeys.fCostMult, 0.5) => " + GetFloatValue(null, suKeys.fCostMult, 0.5))
 		}
 		
@@ -125,6 +129,7 @@ export function SetCosts(option: string, akspell?: Form) {
 		// RemoveDescription(spell)
 		SetFloatValue(null, sSpell, iMag);
 		AddDescription(spell, iMag);
+		SaveDuration(spell)
 	};
 	// const CleanUp = function ( spell: Form ) {  }
 	// if ( isInBlacklist(akspell!) ) { }
@@ -184,23 +189,27 @@ function RemoveDescription(akSpell: Form | Spell) {
 		}};
 }
 
-function RemoveAllDescriptions() {
+function RemoveAllSpellModifications() {
 	for ( let i = 0; i < FormListCount(juKeys.path, suKeys.formUpkeepList); i++) {
 		const formspell = FormListGet(juKeys.path, suKeys.formUpkeepList, i);
 		if ( !formspell || !isRightSpellType(formspell) ) { return; };
 		RemoveDescription(formspell)
+		RevertDurationMod(formspell)
 	};
 }
 function RemoveLoricaSpellsFromPlayer() {
 	once('update', () => {
-		const spellCum =  Spell.from(Game.getFormFromFile(0x1A33, "Lorica Redone.esp")) // the spell responsible for the Cumulative penalty
-		const spellUpkeep =  Spell.from(Game.getFormFromFile(0x1c40, "Lorica Redone.esp")) // the spell responsible for the Total Upkeep penalty
-		const spellDispel = Game.getFormFromFile('FILL WITH CORRECT ID', "Lorica Redone.esp")?.getFormID();
+		const spellCum =  Spell.from(Game.getFormFromFile(0xA33, "Lorica Redone.esp")) // the spell responsible for the Cumulative penalty
+		const spellUpkeep =  Spell.from(Game.getFormFromFile(0xc40, "Lorica Redone.esp")) // the spell responsible for the Total Upkeep penalty
+		const spellDispel = Game.getFormFromFile(0x81b, "Lorica Redone.esp");
+		const spellAddSpell = Game.getFormFromFile(0x821, "Lorica Redone.esp");
 		
 		const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
 	
 		pl()!.removeSpell(spellCum);
 		pl()!.removeSpell(spellUpkeep);
+		pl()!.removeSpell(Spell.from( spellDispel ));
+		pl()!.removeSpell(Spell.from( spellAddSpell ));
 	
 		spellCum.setNthEffectMagnitude(0, 0);
 		spellUpkeep.setNthEffectMagnitude(0, 0);
@@ -208,25 +217,43 @@ function RemoveLoricaSpellsFromPlayer() {
 }
 
 export function DisableLorica() {
-	RemoveAllDescriptions()
+	DispelSpells('all')
+	DestroyLoricaTexts()
+	RemoveAllSpellModifications()
 	RemoveLoricaSpellsFromPlayer()
+	Debug.notification('Lorica Redone Has Been Disabled')
 }
 export function EnableLorica() {
 	const addingspells = async () => {
 		await Utility.wait(0.1)
-		const spellCum =  Spell.from(Game.getFormFromFile(0x1A33, "Lorica Redone.esp")) // the spell responsible for the Cumulative penalty
-		const spellUpkeep =  Spell.from(Game.getFormFromFile(0x1c40, "Lorica Redone.esp")) // the spell responsible for the Total Upkeep penalty
-		const spellDispel = Game.getFormFromFile('FILL WITH CORRECT ID', "Lorica Redone.esp")?.getFormID();
+		const spellCum =  Spell.from(Game.getFormFromFile(0xA33, "Lorica Redone.esp")) // the spell responsible for the Cumulative penalty
+		const spellUpkeep =  Spell.from(Game.getFormFromFile(0xc40, "Lorica Redone.esp")) // the spell responsible for the Total Upkeep penalty
+		const spellDispel = Spell.from( Game.getFormFromFile(0x81b, "Lorica Redone.esp") );
+		const spellAddSpell = Spell.from( Game.getFormFromFile(0x821, "Lorica Redone.esp") );
 		
 		const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
 		const player: Actor = pl()
 		// check if player already has the spells, i.e. whether lorica is already enabled
-		if (player.hasSpell(spellCum) || player.hasSpell(spellUpkeep) || player.hasSpell(spellDispel) ) {return;}
+		if (player.hasSpell(spellCum) && player.hasSpell(spellUpkeep) && player.hasSpell(spellDispel) && player.hasSpell(spellAddSpell)) {return;}
 		player.addSpell(spellCum, false);
 		player.addSpell(spellDispel, false);
 		player.addSpell(spellUpkeep, false);
+		player.addSpell(spellAddSpell, false);
 		
 	}
+	pl()?.dispelAllSpells()
 	addingspells();
 	UpdateAllSpells()
+	CreateWidgets()
+}
+function SaveDuration(akSpell: Form) {
+	if (!akSpell) {return;}
+	const dur: number = Spell.from(akSpell)!.getNthEffectDuration(0)
+	SetFloatValue(null, `YM.LORICA.${akSpell.getFormID()}.Duration.`, dur )
+
+}
+function RevertDurationMod(akSpell: Form) {
+	if (!akSpell) {return;}
+	const dur: number = GetFloatValue(null, `YM.LORICA.${akSpell.getFormID()}.Duration.`)
+	Spell.from(akSpell)?.setNthEffectDuration(0, dur)
 }
