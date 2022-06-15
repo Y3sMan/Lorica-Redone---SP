@@ -1,7 +1,7 @@
 import { on, printConsole, Form, Game, Spell, Utility, hooks, once, FormList, browser, destroyAllTexts} from  "skyrimPlatform"
 import { SetIntValue, GetIntValue, FormListHas, GetFloatValue, FormListAdd, UnsetIntValue, AdjustIntValue, FormListCount, FormListRemove, FormListGet } from  "@skyrim-platform/papyrus-util/StorageUtil";
 import { FormListHas as UpkeepListHas } from  "@skyrim-platform/papyrus-util/JsonUtil";
-import { IntToString, HasActiveSpell, GetAllSpells } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
+import { IntToString, HasActiveSpell, GetAllSpells, GivePlayerSpellBook } from  "@skyrim-platform/po3-papyrus-extender/PO3_SKSEFunctions";
 import { pl, juKeys, suKeys, UIUpdateDebuffMeter } from "./YM_Lorica_Shared"
 import { mainCompat } from "./YM_Lorica_Compat"
 import { mainUtilitySpells } from "./YM_Lorica_UtilitySpells"
@@ -44,13 +44,13 @@ export const DestroyLoricaTexts = function () {
 	wt.spText.destroyAllModTexts(modname)
 }
 export const fadeout = async () => {
-	if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0) {return;}
+	if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0 || GetIntValue(null, suKeys.bModOn, 1) == 0 ) {return;}
 	await Utility.wait(3.0);
 	left_widget.setAlpha(0)
 	right_widget.setAlpha(0)
 }
 export const fadein = async (time: number) => {
-	if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0) {return;}
+	if ( GetIntValue(null, suKeys.bChargingEnable, 1) == 0 || GetIntValue(null, suKeys.bModOn, 1) == 0 ) {return;}
 	await Utility.wait(time);
 	left_widget.setAlpha(1)
 	right_widget.setAlpha(1)
@@ -127,8 +127,13 @@ hooks.sendAnimationEvent.add({
 			bCharging = GetIntValue(null, suKeys.bChargingEnable, 1)
 			if (bCharging == 0) {return;}
 			// widget.setColor([ 1,1, 1, 1 ])
-			widget.setAlpha(1)
-			widget.setText(`${Math.round(duration / max)}%`)
+			try{ 
+				widget.setAlpha(1)
+				widget.setText(`${Math.round(duration / max)}%`)
+			}
+			catch{
+
+			}
 		}
 		if (bCharging == 0) {return;}
 		if (animEvent.includes("spellready") ) { 
@@ -246,6 +251,7 @@ function SetDuration(charge_timer: number, spell: Form) {
 }
 //---------------------------MAIN--------------------------------------------
 on('spellCast', (event) => {
+	if (GetIntValue(null, suKeys.bModOn, 1) == 0) {return;}
 	// const caster = Actor.from(event.caster.getBaseObject()) // event castor as Actor
 	const castspell = Form.from(event.spell) // event spell as Form
 	const formlistApplied = FormList.from(Game.getFormFromFile(0x001D63, "Lorica Redone.esp"))
@@ -263,6 +269,7 @@ on('spellCast', (event) => {
 });
 // ----------------------------------------CLEANUP------------------------------------------
 on('effectFinish', (event) => {
+	if (GetIntValue(null, suKeys.bModOn, 1) == 0) {return;}
 	let e = 'effectFinish started:: '
 	// printConsole(e)
 	if (event.caster.getBaseObject() != pl()?.getBaseObject()) {
